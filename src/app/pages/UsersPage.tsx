@@ -13,6 +13,8 @@ import {
   savePasswordCredential,
 } from "../../../data/repositories/passwordCredentialRepository";
 import { isValidUser } from "../../../domain/validation/entityValidation";
+import { getAuthSession } from "../auth/authSession";
+import { recordAuditEvent } from "../audit/auditService";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -104,6 +106,16 @@ export default function UsersPage() {
 
       await saveUser(newUser);
       await savePasswordCredential(passwordCredential);
+
+      const session = getAuthSession();
+
+      if (session) {
+        await recordAuditEvent(
+          session.userId,
+          "USER_CREATED",
+          `Created user ${newUser.name} with Staff ID ${newUser.staffId}.`,
+        );
+      }
 
       await loadUsers();
 
