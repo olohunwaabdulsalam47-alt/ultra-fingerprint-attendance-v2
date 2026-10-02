@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import type { Attendance } from "../../../domain/entities/attendance";
-import { ATTENDANCE_STATUSES } from "../../../domain/enums/attendanceStatus";
+import {
+  ATTENDANCE_STATUSES,
+  type AttendanceStatus,
+} from "../../../domain/enums/attendanceStatus";
 import { isValidAttendance } from "../../../domain/validation/entityValidation";
 import {
   getAttendance,
@@ -12,7 +15,7 @@ export default function AttendancePage() {
   const [schoolId, setSchoolId] = useState("");
   const [classId, setClassId] = useState("");
   const [studentId, setStudentId] = useState("");
-  const [status, setStatus] = useState(
+  const [status, setStatus] = useState<AttendanceStatus>(
     ATTENDANCE_STATUSES.PRESENT,
   );
   const [error, setError] = useState("");
@@ -139,7 +142,7 @@ export default function AttendancePage() {
             value={status}
             onChange={(event) =>
               setStatus(
-                event.target.value as Attendance["status"],
+                event.target.value as AttendanceStatus,
               )
             }
           >
