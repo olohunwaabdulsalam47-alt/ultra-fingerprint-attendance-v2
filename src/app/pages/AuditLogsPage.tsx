@@ -1,15 +1,8 @@
 import { useEffect, useState } from "react";
+import type { AuditEvent } from "../../../domain/entities/auditEvent";
 import {
   getAuditEvents,
 } from "../../../data/repositories/auditEventRepository";
-
-interface AuditEvent {
-  auditEventId: string;
-  userId: string;
-  action: string;
-  description: string;
-  createdAt: string;
-}
 
 export default function AuditLogsPage() {
   const [events, setEvents] = useState<AuditEvent[]>([]);
