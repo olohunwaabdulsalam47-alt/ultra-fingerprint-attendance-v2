@@ -1,9 +1,10 @@
-import type { ReactNode } from "react";
-import { getAuthSession } from "./authSession";
 import {
-  hasPermission,
-  type Permission,
-} from "./permissions";
+  useEffect,
+  type ReactNode,
+} from "react";
+import type { Permission } from "./permissions";
+import { getAuthSession } from "./authSession";
+import { hasPermission } from "./permissions";
 
 interface ProtectedPageProps {
   permission: Permission;
@@ -16,25 +17,48 @@ export default function ProtectedPage({
 }: ProtectedPageProps) {
   const session = getAuthSession();
 
+  useEffect(() => {
+    if (!session) {
+      window.history.replaceState({}, "", "/login");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    }
+  }, [session]);
+
   if (!session) {
-    return (
-      <section>
-        <h2>Access Denied</h2>
-        <p>
-          You must be logged in to access this page.
-        </p>
-      </section>
-    );
+    return null;
   }
 
   if (!hasPermission(session.role, permission)) {
     return (
-      <section>
-        <h2>Access Denied</h2>
+      <section
+        style={{
+          padding: "32px",
+          maxWidth: "760px",
+          margin: "0 auto",
+        }}
+      >
+        <h1>Access Denied</h1>
+
         <p>
-          Your account does not have permission to access
-          this section.
+          Your account does not have permission to
+          access this section.
         </p>
+
+        <button
+          type="button"
+          onClick={() => {
+            window.history.pushState(
+              {},
+              "",
+              "/",
+            );
+            window.dispatchEvent(
+              new PopStateEvent("popstate"),
+            );
+          }}
+        >
+          Return to Dashboard
+        </button>
       </section>
     );
   }
