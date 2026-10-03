@@ -1,0 +1,253 @@
+.principal-dashboard {
+  padding: 24px;
+  min-height: 100%;
+  background: #f6f8f7;
+}
+
+.principal-dashboard-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.principal-eyebrow {
+  margin: 0 0 6px;
+  color: #0b6b3a;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.principal-dashboard-header h1 {
+  margin: 0;
+  color: #17211c;
+  font-size: 30px;
+  line-height: 1.2;
+}
+
+.principal-dashboard-header > div:first-child > p:last-child {
+  max-width: 760px;
+  margin: 10px 0 0;
+  color: #66716b;
+  line-height: 1.6;
+}
+
+.principal-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 14px;
+  border: 1px solid #cfe2d5;
+  border-radius: 999px;
+  background: #edf8f1;
+  color: #176b3d;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #168346;
+}
+
+.principal-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.principal-metric-card {
+  padding: 20px;
+  border: 1px solid #dce4df;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(16, 38, 25, 0.04);
+}
+
+.principal-metric-card > span {
+  display: block;
+  margin-bottom: 8px;
+  color: #6b756f;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.principal-metric-card strong {
+  display: block;
+  color: #17211c;
+  font-size: 28px;
+  line-height: 1.2;
+}
+
+.principal-metric-card p {
+  margin: 8px 0 0;
+  color: #747e78;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.principal-content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.8fr);
+  gap: 20px;
+}
+
+.principal-panel {
+  padding: 22px;
+  border: 1px solid #dce4df;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(16, 38, 25, 0.04);
+}
+
+.principal-panel-header {
+  margin-bottom: 18px;
+}
+
+.principal-panel-header h2 {
+  margin: 0;
+  color: #17211c;
+  font-size: 20px;
+}
+
+.principal-panel-header p {
+  margin: 6px 0 0;
+  color: #6c7670;
+  line-height: 1.5;
+}
+
+.principal-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.principal-admin-item {
+  padding: 16px;
+  border: 1px solid #e1e8e4;
+  border-radius: 10px;
+  background: #fafcfb;
+}
+
+.principal-admin-item strong {
+  display: block;
+  color: #253129;
+  font-size: 14px;
+}
+
+.principal-admin-item span {
+  display: block;
+  margin-top: 5px;
+  color: #737d77;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.principal-activity-list {
+  display: grid;
+  gap: 4px;
+}
+
+.principal-activity-item {
+  display: flex;
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid #edf0ee;
+}
+
+.principal-activity-item:last-child {
+  border-bottom: 0;
+}
+
+.activity-marker {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: #0b6b3a;
+}
+
+.principal-activity-item strong {
+  color: #29332d;
+  font-size: 14px;
+}
+
+.principal-activity-item p {
+  margin: 5px 0;
+  color: #727c76;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.principal-activity-item small {
+  color: #929a95;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.principal-notice {
+  margin-top: 20px;
+  padding: 18px 20px;
+  border: 1px solid #cfe2d5;
+  border-radius: 12px;
+  background: #edf8f1;
+}
+
+.principal-notice strong {
+  color: #185b36;
+}
+
+.principal-notice p {
+  max-width: 900px;
+  margin: 7px 0 0;
+  color: #52705e;
+  line-height: 1.55;
+  font-size: 14px;
+}
+
+@media (max-width: 950px) {
+  .principal-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .principal-content-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 650px) {
+  .principal-dashboard {
+    padding: 16px;
+  }
+
+  .principal-dashboard-header {
+    flex-direction: column;
+  }
+
+  .principal-dashboard-header h1 {
+    font-size: 25px;
+  }
+
+  .principal-status {
+    white-space: normal;
+  }
+
+  .principal-metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .principal-panel {
+    padding: 16px;
+  }
+
+  .principal-admin-grid {
+    grid-template-columns: 1fr;
+  }
+}
