@@ -5,6 +5,7 @@ import ClassAcademicStructurePage from "./ClassAcademicStructurePage";
 import StudentEnrollmentPage from "./StudentEnrollmentPage";
 import TeacherStaffManagementPage from "./TeacherStaffManagementPage";
 import TeacherAssignmentPage from "./TeacherAssignmentPage";
+import SubjectCurriculumPage from "./SubjectCurriculumPage";
 import SchoolsPage from "./SchoolsPage";
 import SchoolApplicationsPage from "./SchoolApplicationsPage";
 import SuperAdminSchoolsPage from "./SuperAdminSchoolsPage";
@@ -83,6 +84,14 @@ export default function AppPage({
     page = (
       <ProtectedPage permission="MANAGE_SCHOOLS">
         <TeacherAssignmentPage />
+      </ProtectedPage>
+    );
+  }
+
+  if (path === "/subject-curriculum") {
+    page = (
+      <ProtectedPage permission="MANAGE_SCHOOLS">
+        <SubjectCurriculumPage />
       </ProtectedPage>
     );
   }
