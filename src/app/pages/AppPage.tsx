@@ -1,5 +1,6 @@
 import DashboardPage from "./DashboardPage";
 import SchoolsPage from "./SchoolsPage";
+import SchoolApplicationsPage from "./SchoolApplicationsPage";
 import ClassesPage from "./ClassesPage";
 import StudentsPage from "./StudentsPage";
 import AttendancePage from "./AttendancePage";
@@ -17,6 +18,14 @@ export default function AppPage() {
       <DashboardPage />
     </ProtectedPage>
   );
+
+  if (path === "/school-applications") {
+    page = (
+      <ProtectedPage permission="MANAGE_SCHOOLS">
+        <SchoolApplicationsPage />
+      </ProtectedPage>
+    );
+  }
 
   if (path === "/schools") {
     page = (
