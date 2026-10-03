@@ -3,6 +3,7 @@ import SchoolsPage from "./SchoolsPage";
 import SchoolApplicationsPage from "./SchoolApplicationsPage";
 import SuperAdminSchoolsPage from "./SuperAdminSchoolsPage";
 import SuperAdminSubscriptionsPage from "./SuperAdminSubscriptionsPage";
+import SuperAdminPaymentsPage from "./SuperAdminPaymentsPage";
 import ClassesPage from "./ClassesPage";
 import StudentsPage from "./StudentsPage";
 import AttendancePage from "./AttendancePage";
@@ -41,6 +42,14 @@ export default function AppPage() {
     page = (
       <ProtectedPage permission="MANAGE_SCHOOLS">
         <SuperAdminSubscriptionsPage />
+      </ProtectedPage>
+    );
+  }
+
+  if (path === "/superadmin-payments") {
+    page = (
+      <ProtectedPage permission="MANAGE_SCHOOLS">
+        <SuperAdminPaymentsPage />
       </ProtectedPage>
     );
   }
