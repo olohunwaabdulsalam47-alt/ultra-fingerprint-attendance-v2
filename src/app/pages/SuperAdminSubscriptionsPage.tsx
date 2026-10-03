@@ -478,4 +478,437 @@ export default function SuperAdminSubscriptionsPage() {
       <section className="subscription-table-card">
         {rows.length === 0 ? (
           <div className="subscription-empty">
-            <div>
+            <div>💳</div>
+            <h2>No subscription records</h2>
+            <p>
+              Approved schools will appear here when
+              their subscription is opened.
+            </p>
+          </div>
+        ) : (
+          <div className="subscription-table-wrap">
+            <table className="subscription-table">
+              <thead>
+                <tr>
+                  <th>School</th>
+                  <th>Plan</th>
+                  <th>Cycle</th>
+                  <th>Status</th>
+                  <th>Payment</th>
+                  <th>Renewal</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {rows.map(
+                  ({ school, subscription }) => (
+                    <tr key={school.applicationId}>
+                      <td>
+                        <strong>
+                          {school.schoolName}
+                        </strong>
+                        <span>
+                          {school.applicationId}
+                        </span>
+                      </td>
+
+                      <td>
+                        {subscription
+                          ? plans.find(
+                              (plan) =>
+                                plan.id ===
+                                subscription.planId,
+                            )?.name ??
+                            subscription.planId
+                          : "Not configured"}
+                      </td>
+
+                      <td>
+                        {subscription?.billingCycle ??
+                          "—"}
+                      </td>
+
+                      <td>
+                        {subscription ? (
+                          <span
+                            className={`subscription-badge subscription-${subscription.status.toLowerCase()}`}
+                          >
+                            {subscription.status.replaceAll(
+                              "_",
+                              " ",
+                            )}
+                          </span>
+                        ) : (
+                          <span className="subscription-badge subscription-unconfigured">
+                            NOT CONFIGURED
+                          </span>
+                        )}
+                      </td>
+
+                      <td>
+                        {subscription?.paymentStatus ??
+                          "—"}
+                      </td>
+
+                      <td>
+                        {subscription
+                          ? formatDate(
+                              subscription.renewalDate,
+                            )
+                          : "—"}
+                      </td>
+
+                      <td>
+                        <button
+                          type="button"
+                          className="subscription-manage-button"
+                          onClick={() =>
+                            openSubscription(school)
+                          }
+                        >
+                          Manage
+                        </button>
+                      </td>
+                    </tr>
+                  ),
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {showPlans && (
+        <div
+          className="subscription-modal-overlay"
+          onMouseDown={(event) => {
+            if (
+              event.target === event.currentTarget
+            ) {
+              setShowPlans(false);
+            }
+          }}
+        >
+          <section className="subscription-modal">
+            <header>
+              <div>
+                <p className="subscription-kicker">
+                  PLATFORM CONFIGURATION
+                </p>
+                <h2>Subscription Plans</h2>
+              </div>
+
+              <button
+                type="button"
+                className="modal-close"
+                onClick={() => setShowPlans(false)}
+              >
+                ×
+              </button>
+            </header>
+
+            <div className="plan-list">
+              {plans.map((plan) => (
+                <article
+                  className="plan-card"
+                  key={plan.id}
+                >
+                  <div>
+                    <span className="plan-id">
+                      {plan.id}
+                    </span>
+
+                    <h3>{plan.name}</h3>
+
+                    <p>{plan.description}</p>
+                  </div>
+
+                  <div className="plan-prices">
+                    <strong>
+                      {money(plan.monthlyPrice)}
+                    </strong>
+
+                    <span>/ month</span>
+
+                    <strong>
+                      {money(plan.yearlyPrice)}
+                    </strong>
+
+                    <span>/ year</span>
+                  </div>
+
+                  <div className="plan-limits">
+                    <span>
+                      Students:{" "}
+                      {plan.maxStudents ??
+                        "Unlimited"}
+                    </span>
+
+                    <span>
+                      Staff:{" "}
+                      {plan.maxStaff ??
+                        "Unlimited"}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    className={
+                      plan.status === "ACTIVE"
+                        ? "plan-deactivate"
+                        : "plan-activate"
+                    }
+                    onClick={() =>
+                      updatePlanStatus(
+                        plan.id,
+                        plan.status === "ACTIVE"
+                          ? "INACTIVE"
+                          : "ACTIVE",
+                      )
+                    }
+                  >
+                    {plan.status === "ACTIVE"
+                      ? "Deactivate Plan"
+                      : "Activate Plan"}
+                  </button>
+                </article>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
+
+      {selectedSubscription && (
+        <div
+          className="subscription-modal-overlay"
+          onMouseDown={(event) => {
+            if (
+              event.target === event.currentTarget
+            ) {
+              setSelectedSubscription(null);
+            }
+          }}
+        >
+          <section className="subscription-modal">
+            <header>
+              <div>
+                <p className="subscription-kicker">
+                  SUBSCRIPTION MANAGEMENT
+                </p>
+
+                <h2>
+                  {selectedSubscription.schoolName}
+                </h2>
+
+                <span>
+                  {selectedSubscription.applicationId}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                className="modal-close"
+                onClick={() =>
+                  setSelectedSubscription(null)
+                }
+              >
+                ×
+              </button>
+            </header>
+
+            <div className="subscription-form">
+              <div>
+                <label htmlFor="subscription-plan">
+                  Plan
+                </label>
+
+                <select
+                  id="subscription-plan"
+                  value={selectedSubscription.planId}
+                  onChange={(event) =>
+                    updateSubscription({
+                      planId: event.target.value,
+                    })
+                  }
+                >
+                  {plans
+                    .filter(
+                      (plan) =>
+                        plan.status === "ACTIVE",
+                    )
+                    .map((plan) => (
+                      <option
+                        key={plan.id}
+                        value={plan.id}
+                      >
+                        {plan.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="subscription-billing">
+                  Billing Cycle
+                </label>
+
+                <select
+                  id="subscription-billing"
+                  value={
+                    selectedSubscription.billingCycle
+                  }
+                  onChange={(event) =>
+                    updateSubscription({
+                      billingCycle:
+                        event.target
+                          .value as BillingCycle,
+                    })
+                  }
+                >
+                  <option value="MONTHLY">
+                    Monthly
+                  </option>
+                  <option value="YEARLY">
+                    Yearly
+                  </option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="subscription-state">
+                  Subscription Status
+                </label>
+
+                <select
+                  id="subscription-state"
+                  value={selectedSubscription.status}
+                  onChange={(event) =>
+                    updateSubscription({
+                      status:
+                        event.target
+                          .value as SubscriptionStatus,
+                    })
+                  }
+                >
+                  <option value="TRIAL">
+                    Trial
+                  </option>
+                  <option value="ACTIVE">
+                    Active
+                  </option>
+                  <option value="PAST_DUE">
+                    Past Due
+                  </option>
+                  <option value="EXPIRED">
+                    Expired
+                  </option>
+                  <option value="CANCELLED">
+                    Cancelled
+                  </option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="subscription-payment">
+                  Payment Status
+                </label>
+
+                <select
+                  id="subscription-payment"
+                  value={
+                    selectedSubscription.paymentStatus
+                  }
+                  onChange={(event) =>
+                    updateSubscription({
+                      paymentStatus:
+                        event.target
+                          .value as SchoolSubscription["paymentStatus"],
+                    })
+                  }
+                >
+                  <option value="PAID">Paid</option>
+                  <option value="PENDING">
+                    Pending
+                  </option>
+                  <option value="OVERDUE">
+                    Overdue
+                  </option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="subscription-start">
+                  Start Date
+                </label>
+
+                <input
+                  id="subscription-start"
+                  type="date"
+                  value={
+                    selectedSubscription.startDate.slice(
+                      0,
+                      10,
+                    )
+                  }
+                  onChange={(event) =>
+                    updateSubscription({
+                      startDate: new Date(
+                        `${event.target.value}T00:00:00`,
+                      ).toISOString(),
+                    })
+                  }
+                />
+              </div>
+
+              <div>
+                <label htmlFor="subscription-renewal">
+                  Renewal Date
+                </label>
+
+                <input
+                  id="subscription-renewal"
+                  type="date"
+                  value={
+                    selectedSubscription.renewalDate.slice(
+                      0,
+                      10,
+                    )
+                  }
+                  onChange={(event) =>
+                    updateSubscription({
+                      renewalDate: new Date(
+                        `${event.target.value}T00:00:00`,
+                      ).toISOString(),
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="subscription-summary">
+              <span>Current Plan</span>
+
+              <strong>
+                {plans.find(
+                  (plan) =>
+                    plan.id ===
+                    selectedSubscription.planId,
+                )?.name ??
+                  selectedSubscription.planId}
+              </strong>
+
+              <span>Renewal</span>
+
+              <strong>
+                {formatDate(
+                  selectedSubscription.renewalDate,
+                )}
+              </strong>
+            </div>
+          </section>
+        </div>
+      )}
+    </main>
+  );
+}
