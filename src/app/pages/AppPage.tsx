@@ -1,6 +1,7 @@
 import DashboardPage from "./DashboardPage";
 import PrincipalDashboardPage from "./PrincipalDashboardPage";
 import SchoolProfileSettingsPage from "./SchoolProfileSettingsPage";
+import ClassAcademicStructurePage from "./ClassAcademicStructurePage";
 import SchoolsPage from "./SchoolsPage";
 import SchoolApplicationsPage from "./SchoolApplicationsPage";
 import SuperAdminSchoolsPage from "./SuperAdminSchoolsPage";
@@ -24,9 +25,11 @@ import BiometricPage from "./BiometricPage";
 import AuditLogsPage from "./AuditLogsPage";
 import ProtectedPage from "../auth/ProtectedPage";
 
-export default function AppPage() {
-  const path = window.location.pathname;
-
+export default function AppPage({
+  path,
+}: {
+  path: string;
+}) {
   let page = (
     <ProtectedPage permission="VIEW_DASHBOARD">
       <DashboardPage />
@@ -45,6 +48,22 @@ export default function AppPage() {
     page = (
       <ProtectedPage permission="MANAGE_SCHOOLS">
         <SchoolProfileSettingsPage />
+      </ProtectedPage>
+    );
+  }
+
+  if (path === "/class-academic-structure") {
+    page = (
+      <ProtectedPage permission="MANAGE_SCHOOLS">
+        <ClassAcademicStructurePage />
+      </ProtectedPage>
+    );
+  }
+
+  if (path === "/schools") {
+    page = (
+      <ProtectedPage permission="MANAGE_SCHOOLS">
+        <SchoolsPage />
       </ProtectedPage>
     );
   }
@@ -83,7 +102,7 @@ export default function AppPage() {
 
   if (path === "/superadmin-users") {
     page = (
-      <ProtectedPage permission="MANAGE_USERS">
+      <ProtectedPage permission="MANAGE_SCHOOLS">
         <SuperAdminUsersPage />
       </ProtectedPage>
     );
@@ -107,7 +126,7 @@ export default function AppPage() {
 
   if (path === "/superadmin-support-incidents") {
     page = (
-      <ProtectedPage permission="VIEW_AUDIT_LOGS">
+      <ProtectedPage permission="MANAGE_SCHOOLS">
         <SuperAdminSupportIncidentPage />
       </ProtectedPage>
     );
@@ -115,7 +134,7 @@ export default function AppPage() {
 
   if (path === "/superadmin-communication") {
     page = (
-      <ProtectedPage permission="VIEW_AUDIT_LOGS">
+      <ProtectedPage permission="MANAGE_SCHOOLS">
         <SuperAdminCommunicationPage />
       </ProtectedPage>
     );
@@ -123,7 +142,7 @@ export default function AppPage() {
 
   if (path === "/superadmin-operations") {
     page = (
-      <ProtectedPage permission="VIEW_AUDIT_LOGS">
+      <ProtectedPage permission="MANAGE_SCHOOLS">
         <SuperAdminOperationsPage />
       </ProtectedPage>
     );
@@ -131,7 +150,7 @@ export default function AppPage() {
 
   if (path === "/superadmin-data-privacy") {
     page = (
-      <ProtectedPage permission="VIEW_AUDIT_LOGS">
+      <ProtectedPage permission="MANAGE_SCHOOLS">
         <SuperAdminDataPrivacyPage />
       </ProtectedPage>
     );
@@ -139,7 +158,7 @@ export default function AppPage() {
 
   if (path === "/superadmin-analytics-tools") {
     page = (
-      <ProtectedPage permission="VIEW_DASHBOARD">
+      <ProtectedPage permission="VIEW_REPORTS">
         <SuperAdminAnalyticsToolsPage />
       </ProtectedPage>
     );
@@ -153,17 +172,9 @@ export default function AppPage() {
     );
   }
 
-  if (path === "/schools") {
-    page = (
-      <ProtectedPage permission="MANAGE_SCHOOLS">
-        <SchoolsPage />
-      </ProtectedPage>
-    );
-  }
-
   if (path === "/classes") {
     page = (
-      <ProtectedPage permission="MANAGE_CLASSES">
+      <ProtectedPage permission="MANAGE_SCHOOLS">
         <ClassesPage />
       </ProtectedPage>
     );
@@ -171,7 +182,7 @@ export default function AppPage() {
 
   if (path === "/students") {
     page = (
-      <ProtectedPage permission="MANAGE_STUDENTS">
+      <ProtectedPage permission="MANAGE_SCHOOLS">
         <StudentsPage />
       </ProtectedPage>
     );
@@ -179,7 +190,7 @@ export default function AppPage() {
 
   if (path === "/attendance") {
     page = (
-      <ProtectedPage permission="RECORD_ATTENDANCE">
+      <ProtectedPage permission="VIEW_DASHBOARD">
         <AttendancePage />
       </ProtectedPage>
     );
@@ -195,7 +206,7 @@ export default function AppPage() {
 
   if (path === "/users") {
     page = (
-      <ProtectedPage permission="MANAGE_USERS">
+      <ProtectedPage permission="MANAGE_SCHOOLS">
         <UsersPage />
       </ProtectedPage>
     );
@@ -203,7 +214,7 @@ export default function AppPage() {
 
   if (path === "/biometric") {
     page = (
-      <ProtectedPage permission="MANAGE_BIOMETRIC">
+      <ProtectedPage permission="MANAGE_SCHOOLS">
         <BiometricPage />
       </ProtectedPage>
     );
