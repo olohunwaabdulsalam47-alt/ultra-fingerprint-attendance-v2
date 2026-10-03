@@ -10,7 +10,6 @@ import TimetableSchedulePage from "./TimetableSchedulePage";
 import ExaminationAssessmentPage from "./ExaminationAssessmentPage";
 import ResultsScoreManagementPage from "./ResultsScoreManagementPage";
 import ReportCardsResultsPage from "./ReportCardsResultsPage";
-import AcademicResultAnalyticsPage from "./AcademicResultAnalyticsPage";
 
 import SchoolsPage from "./SchoolsPage";
 import SchoolApplicationsPage from "./SchoolApplicationsPage";
@@ -109,11 +108,6 @@ export default function AppPage({
     "/report-cards-results": {
       permission: "VIEW_REPORTS",
       element: <ReportCardsResultsPage />,
-    },
-
-    "/academic-result-analytics": {
-      permission: "VIEW_REPORTS",
-      element: <AcademicResultAnalyticsPage />,
     },
 
     "/schools": {
