@@ -1,33 +1,28 @@
 import { useState } from "react";
-import type { WebAuthnCredential } from "../../../domain/entities/webauthnCredential";
-import { saveWebAuthnCredential } from "../../../data/repositories/webauthnCredentialRepository";
-
-function toBase64Url(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-
-  return btoa(binary)
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/g, "");
-}
+import {
+  saveWebAuthnCredential,
+} from "../../../data/repositories/webauthnCredentialRepository";
+import { getAuthSession } from "../auth/authSession";
+import { recordAuditEvent } from "../audit/auditService";
 
 export default function BiometricPage() {
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   async function registerBiometric() {
     setMessage("");
+    setError("");
 
-    if (
-      !("PublicKeyCredential" in window) ||
-      typeof navigator.credentials?.create !== "function"
-    ) {
-      setMessage(
-        "Biometric/WebAuthn is not supported by this browser.",
+    const session = getAuthSession();
+
+    if (!session) {
+      setError("You must be logged in.");
+      return;
+    }
+
+    if (!window.PublicKeyCredential) {
+      setError(
+        "Biometric authentication is not supported on this device.",
       );
       return;
     }
@@ -43,11 +38,11 @@ export default function BiometricPage() {
               name: "ULTRA FINGERPRINT ATTENDANCE",
             },
             user: {
-              id: crypto.getRandomValues(
-                new Uint8Array(16),
+              id: new TextEncoder().encode(
+                session.userId,
               ),
-              name: "staff@ultra-attendance.local",
-              displayName: "Attendance Staff",
+              name: session.staffId,
+              displayName: session.name,
             },
             pubKeyCredParams: [
               {
@@ -60,58 +55,92 @@ export default function BiometricPage() {
               },
             ],
             authenticatorSelection: {
+              authenticatorAttachment:
+                "platform",
               userVerification: "required",
             },
             timeout: 60000,
+            attestation: "none",
           },
         });
 
-      if (!(credential instanceof PublicKeyCredential)) {
-        throw new Error(
-          "Biometric registration failed.",
+      if (!credential) {
+        setError(
+          "Biometric registration was cancelled.",
         );
+        return;
       }
 
-      const credentialRecord: WebAuthnCredential = {
-        credentialId: toBase64Url(
-          credential.rawId,
-        ),
-        userId: "current-user",
+      const publicKeyCredential =
+        credential as PublicKeyCredential;
+
+      const response =
+        publicKeyCredential.response as AuthenticatorAttestationResponse;
+
+      const storedCredential = {
+        credentialId: Array.from(
+          new Uint8Array(
+            publicKeyCredential.rawId,
+          ),
+        )
+          .map((byte) =>
+            byte.toString(16).padStart(2, "0"),
+          )
+          .join(""),
+        userId: session.userId,
+        publicKey: Array.from(
+          new Uint8Array(
+            response.getPublicKey() ?? new ArrayBuffer(0),
+          ),
+        )
+          .map((byte) =>
+            byte.toString(16).padStart(2, "0"),
+          )
+          .join(""),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
       await saveWebAuthnCredential(
-        credentialRecord,
+        storedCredential,
+      );
+
+      await recordAuditEvent(
+        session.userId,
+        "BIOMETRIC_REGISTERED",
+        `Registered a biometric credential for ${session.name}.`,
       );
 
       setMessage(
         "Biometric credential registered successfully.",
       );
     } catch {
-      setMessage(
-        "Biometric registration was cancelled or could not be completed.",
+      setError(
+        "Biometric registration failed or was cancelled.",
       );
     }
   }
 
   return (
     <section>
-      <h2>Biometric Management</h2>
+      <h2>Biometric Authentication</h2>
 
       <p>
-        Register a fingerprint or other supported
-        WebAuthn biometric credential.
+        Register this device's supported biometric
+        authenticator for your account.
       </p>
 
       <button
         type="button"
-        onClick={() => void registerBiometric()}
+        onClick={() => {
+          void registerBiometric();
+        }}
       >
         Register Biometric
       </button>
 
-      {message && <p role="status">{message}</p>}
+      {message && <p>{message}</p>}
+      {error && <p role="alert">{error}</p>}
     </section>
   );
 }
