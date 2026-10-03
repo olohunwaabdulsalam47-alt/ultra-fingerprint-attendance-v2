@@ -1,5 +1,6 @@
 import DashboardPage from "./DashboardPage";
 import PrincipalDashboardPage from "./PrincipalDashboardPage";
+import SchoolProfileSettingsPage from "./SchoolProfileSettingsPage";
 import SchoolsPage from "./SchoolsPage";
 import SchoolApplicationsPage from "./SchoolApplicationsPage";
 import SuperAdminSchoolsPage from "./SuperAdminSchoolsPage";
@@ -36,6 +37,14 @@ export default function AppPage() {
     page = (
       <ProtectedPage permission="VIEW_DASHBOARD">
         <PrincipalDashboardPage />
+      </ProtectedPage>
+    );
+  }
+
+  if (path === "/school-profile-settings") {
+    page = (
+      <ProtectedPage permission="MANAGE_SCHOOLS">
+        <SchoolProfileSettingsPage />
       </ProtectedPage>
     );
   }
