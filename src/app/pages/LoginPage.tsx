@@ -8,9 +8,6 @@ import AppPage from "./AppPage";
 import { authenticateUser } from "../auth/authenticateUser";
 import { saveAuthSession } from "../auth/authSession";
 
-const DEMO_STAFF_ID = "ADMIN001";
-const DEMO_PASSWORD = "Admin@123";
-
 export default function LoginPage() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [staffId, setStaffId] = useState("");
@@ -31,11 +28,10 @@ export default function LoginPage() {
     event: FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
-
     setError("");
 
     const result = await authenticateUser(
-      staffId,
+      staffId.trim(),
       password,
     );
 
@@ -94,22 +90,12 @@ export default function LoginPage() {
           />
         </label>
 
-        <button type="submit">Login</button>
+        <button type="submit">
+          Login
+        </button>
       </form>
 
       {error && <p role="alert">{error}</p>}
-
-      <hr />
-
-      <p>
-        Initial Demo Staff ID:{" "}
-        <strong>{DEMO_STAFF_ID}</strong>
-      </p>
-
-      <p>
-        Initial Demo Password:{" "}
-        <strong>{DEMO_PASSWORD}</strong>
-      </p>
     </main>
   );
 }
