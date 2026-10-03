@@ -1,6 +1,7 @@
 import DashboardPage from "./DashboardPage";
 import SchoolsPage from "./SchoolsPage";
 import SchoolApplicationsPage from "./SchoolApplicationsPage";
+import SuperAdminSchoolsPage from "./SuperAdminSchoolsPage";
 import ClassesPage from "./ClassesPage";
 import StudentsPage from "./StudentsPage";
 import AttendancePage from "./AttendancePage";
@@ -23,6 +24,14 @@ export default function AppPage() {
     page = (
       <ProtectedPage permission="MANAGE_SCHOOLS">
         <SchoolApplicationsPage />
+      </ProtectedPage>
+    );
+  }
+
+  if (path === "/superadmin-schools") {
+    page = (
+      <ProtectedPage permission="MANAGE_SCHOOLS">
+        <SuperAdminSchoolsPage />
       </ProtectedPage>
     );
   }
