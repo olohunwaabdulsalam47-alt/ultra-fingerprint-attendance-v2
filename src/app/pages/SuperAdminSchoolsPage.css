@@ -1,0 +1,435 @@
+.superadmin-schools-page {
+  min-height: 100vh;
+  padding: 34px;
+  background: #f5f8f6;
+  color: #10251b;
+}
+
+.superadmin-schools-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.superadmin-schools-kicker {
+  margin: 0 0 7px;
+  color: #0b6b3a;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+}
+
+.superadmin-schools-header h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 2.7rem);
+}
+
+.superadmin-schools-header > div > p:last-child {
+  margin: 9px 0 0;
+  color: #65746c;
+  line-height: 1.6;
+}
+
+.superadmin-schools-back {
+  border: 1px solid #d5e2da;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #0b6b3a;
+  padding: 11px 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.superadmin-school-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.superadmin-school-stats article {
+  padding: 19px;
+  border: 1px solid #dfe9e3;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.superadmin-school-stats span,
+.superadmin-school-stats strong {
+  display: block;
+}
+
+.superadmin-school-stats span {
+  color: #68766e;
+  font-size: 0.77rem;
+}
+
+.superadmin-school-stats strong {
+  margin-top: 7px;
+  color: #0b6b3a;
+  font-size: 1.75rem;
+}
+
+.superadmin-school-toolbar {
+  display: flex;
+  gap: 18px;
+  align-items: end;
+  margin-bottom: 20px;
+}
+
+.superadmin-school-toolbar > div:first-child {
+  flex: 1;
+}
+
+.superadmin-school-toolbar > div {
+  display: grid;
+  gap: 7px;
+}
+
+.superadmin-school-toolbar > div:last-child {
+  width: 220px;
+}
+
+.superadmin-school-toolbar label {
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.superadmin-school-toolbar input,
+.superadmin-school-toolbar select,
+.school-management-notes textarea {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid #ccd9d1;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #10251b;
+  font: inherit;
+  outline: none;
+}
+
+.superadmin-school-toolbar input,
+.superadmin-school-toolbar select {
+  padding: 12px 13px;
+}
+
+.superadmin-school-toolbar input:focus,
+.superadmin-school-toolbar select:focus,
+.school-management-notes textarea:focus {
+  border-color: #0b6b3a;
+  box-shadow: 0 0 0 3px rgba(11, 107, 58, 0.1);
+}
+
+.superadmin-schools-card {
+  overflow: hidden;
+  border: 1px solid #dfe9e3;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.superadmin-schools-table-wrap {
+  overflow-x: auto;
+}
+
+.superadmin-schools-table {
+  width: 100%;
+  min-width: 1050px;
+  border-collapse: collapse;
+}
+
+.superadmin-schools-table th {
+  padding: 14px 16px;
+  background: #f4f8f5;
+  color: #5d6d64;
+  font-size: 0.71rem;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.superadmin-schools-table td {
+  padding: 16px;
+  border-top: 1px solid #e8eee9;
+  font-size: 0.84rem;
+}
+
+.superadmin-schools-table td strong,
+.superadmin-schools-table td span {
+  display: block;
+}
+
+.superadmin-schools-table td span {
+  margin-top: 4px;
+  color: #69776f;
+  font-size: 0.76rem;
+}
+
+.school-status-badge {
+  display: inline-block !important;
+  width: fit-content;
+  margin: 0 !important;
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: 0.67rem !important;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.status-active {
+  background: #e6f7ed;
+  color: #17683d;
+}
+
+.status-inactive {
+  background: #eef1ef;
+  color: #5c6861;
+}
+
+.status-suspended {
+  background: #ffe9e9;
+  color: #a32929;
+}
+
+.status-archived {
+  background: #e9e9ec;
+  color: #50515a;
+}
+
+.school-view-button {
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #0b6b3a;
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.superadmin-schools-empty {
+  padding: 70px 24px;
+  text-align: center;
+}
+
+.empty-symbol {
+  font-size: 2rem;
+}
+
+.superadmin-schools-empty h2 {
+  margin: 14px 0 7px;
+}
+
+.superadmin-schools-empty p {
+  margin: 0;
+  color: #68766e;
+}
+
+.school-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(8, 24, 16, 0.58);
+}
+
+.school-modal {
+  width: min(900px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.25);
+}
+
+.school-modal-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 25px 28px;
+  border-bottom: 1px solid #e4ebe6;
+}
+
+.school-modal-header h2 {
+  margin: 0;
+}
+
+.school-modal-header span {
+  display: block;
+  margin-top: 5px;
+  color: #68766e;
+  font-size: 0.8rem;
+}
+
+.school-modal-close {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  background: #f0f4f1;
+  color: #34483d;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+.school-modal-content {
+  padding: 22px 28px 28px;
+}
+
+.school-current-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 16px;
+  border-radius: 11px;
+  background: #f4f8f5;
+}
+
+.school-current-status span {
+  color: #637169;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.school-information-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 18px;
+  overflow: hidden;
+  border: 1px solid #e0e8e3;
+  border-radius: 12px;
+}
+
+.school-information-grid div {
+  padding: 15px;
+  border-bottom: 1px solid #e0e8e3;
+}
+
+.school-information-grid span,
+.school-information-grid strong {
+  display: block;
+}
+
+.school-information-grid span {
+  margin-bottom: 5px;
+  color: #6b7971;
+  font-size: 0.74rem;
+}
+
+.school-information-grid strong {
+  font-size: 0.87rem;
+  overflow-wrap: anywhere;
+}
+
+.school-management-notes {
+  display: grid;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.school-management-notes label {
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.school-management-notes textarea {
+  padding: 12px;
+  resize: vertical;
+}
+
+.school-management-notes small {
+  color: #69776f;
+  line-height: 1.5;
+}
+
+.school-management-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+}
+
+.school-management-actions button {
+  border: 0;
+  border-radius: 9px;
+  padding: 11px 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.school-action-active {
+  background: #0b6b3a;
+  color: #ffffff;
+}
+
+.school-action-inactive {
+  background: #eef1ef;
+  color: #505c55;
+}
+
+.school-action-suspend {
+  background: #ffe9e9;
+  color: #a32929;
+}
+
+.school-action-archive {
+  background: #e9e9ec;
+  color: #50515a;
+}
+
+@media (max-width: 900px) {
+  .superadmin-schools-page {
+    padding: 24px 18px;
+  }
+
+  .superadmin-school-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .superadmin-school-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .superadmin-school-toolbar > div:last-child {
+    width: auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .superadmin-schools-header {
+    flex-direction: column;
+  }
+
+  .superadmin-school-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .school-information-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .school-modal-header,
+  .school-modal-content {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .school-current-status {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .school-management-actions {
+    flex-direction: column;
+  }
+
+  .school-management-actions button {
+    width: 100%;
+  }
+}
