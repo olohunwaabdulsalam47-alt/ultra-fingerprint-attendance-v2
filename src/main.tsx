@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import LoginPage from "./app/pages/LoginPage";
 import HomePage from "./app/pages/HomePage";
 import SchoolRegistrationPage from "./app/pages/SchoolRegistrationPage";
+import ApplicationTrackingPage from "./app/pages/ApplicationTrackingPage";
 import { startOfflineSync } from "./app/offline/offlineSyncService";
 
 startOfflineSync();
@@ -16,6 +17,10 @@ function AppEntry() {
 
   if (path === "/register-school") {
     return <SchoolRegistrationPage />;
+  }
+
+  if (path === "/track-application") {
+    return <ApplicationTrackingPage />;
   }
 
   if (path === "/") {
