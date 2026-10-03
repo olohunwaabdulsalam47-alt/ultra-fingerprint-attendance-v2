@@ -6,6 +6,7 @@ import StudentEnrollmentPage from "./StudentEnrollmentPage";
 import TeacherStaffManagementPage from "./TeacherStaffManagementPage";
 import TeacherAssignmentPage from "./TeacherAssignmentPage";
 import SubjectCurriculumPage from "./SubjectCurriculumPage";
+import TimetableSchedulePage from "./TimetableSchedulePage";
 import SchoolsPage from "./SchoolsPage";
 import SchoolApplicationsPage from "./SchoolApplicationsPage";
 import SuperAdminSchoolsPage from "./SuperAdminSchoolsPage";
@@ -92,6 +93,14 @@ export default function AppPage({
     page = (
       <ProtectedPage permission="MANAGE_SCHOOLS">
         <SubjectCurriculumPage />
+      </ProtectedPage>
+    );
+  }
+
+  if (path === "/timetable-schedule") {
+    page = (
+      <ProtectedPage permission="MANAGE_SCHOOLS">
+        <TimetableSchedulePage />
       </ProtectedPage>
     );
   }
