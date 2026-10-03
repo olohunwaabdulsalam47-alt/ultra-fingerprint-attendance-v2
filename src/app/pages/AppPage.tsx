@@ -1,4 +1,5 @@
 import DashboardPage from "./DashboardPage";
+import PrincipalDashboardPage from "./PrincipalDashboardPage";
 import SchoolsPage from "./SchoolsPage";
 import SchoolApplicationsPage from "./SchoolApplicationsPage";
 import SuperAdminSchoolsPage from "./SuperAdminSchoolsPage";
@@ -30,6 +31,14 @@ export default function AppPage() {
       <DashboardPage />
     </ProtectedPage>
   );
+
+  if (path === "/principal-dashboard") {
+    page = (
+      <ProtectedPage permission="VIEW_DASHBOARD">
+        <PrincipalDashboardPage />
+      </ProtectedPage>
+    );
+  }
 
   if (path === "/school-applications") {
     page = (
