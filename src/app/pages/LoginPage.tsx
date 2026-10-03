@@ -4,7 +4,6 @@ import {
   useState,
 } from "react";
 
-import AppLayout from "../layout/AppLayout";
 import AppPage from "./AppPage";
 
 import {
@@ -33,14 +32,17 @@ export default function LoginPage() {
     useState(window.location.pathname);
 
   useEffect(() => {
-    const session = getAuthSession();
+    const session =
+      getAuthSession();
 
     if (session) {
       setLoggedIn(true);
     }
 
     const handleNavigation = () => {
-      setPath(window.location.pathname);
+      setPath(
+        window.location.pathname,
+      );
     };
 
     window.addEventListener(
@@ -63,41 +65,48 @@ export default function LoginPage() {
 
     setError("");
 
-    try {
-      const session =
-        await authenticateUser(
-          staffId.trim(),
-          password,
-        );
-
-      saveAuthSession(session);
-
-      window.history.replaceState(
-        {},
-        "",
-        "/",
+    const result =
+      await authenticateUser(
+        staffId.trim(),
+        password,
       );
 
-      window.dispatchEvent(
-        new PopStateEvent("popstate"),
-      );
-
-      setPath("/");
-      setLoggedIn(true);
-    } catch (loginError) {
+    if (!result.success) {
       setError(
-        loginError instanceof Error
-          ? loginError.message
-          : "Login failed.",
+        result.error ??
+          "Login failed.",
       );
+      return;
     }
+
+    if (!result.session) {
+      setError(
+        "Authentication succeeded but no session was created.",
+      );
+      return;
+    }
+
+    saveAuthSession(
+      result.session,
+    );
+
+    window.history.replaceState(
+      {},
+      "",
+      "/",
+    );
+
+    window.dispatchEvent(
+      new PopStateEvent("popstate"),
+    );
+
+    setPath("/");
+    setLoggedIn(true);
   }
 
   if (loggedIn) {
     return (
-      <AppLayout>
-        <AppPage path={path} />
-      </AppLayout>
+      <AppPage path={path} />
     );
   }
 
@@ -122,7 +131,9 @@ export default function LoginPage() {
             type="text"
             value={staffId}
             onChange={(event) =>
-              setStaffId(event.target.value)
+              setStaffId(
+                event.target.value,
+              )
             }
             autoComplete="username"
             required
@@ -137,7 +148,9 @@ export default function LoginPage() {
             type="password"
             value={password}
             onChange={(event) =>
-              setPassword(event.target.value)
+              setPassword(
+                event.target.value,
+              )
             }
             autoComplete="current-password"
             required
