@@ -8,6 +8,7 @@ import TeacherAssignmentPage from "./TeacherAssignmentPage";
 import SubjectCurriculumPage from "./SubjectCurriculumPage";
 import TimetableSchedulePage from "./TimetableSchedulePage";
 import ExaminationAssessmentPage from "./ExaminationAssessmentPage";
+import ResultsScoreManagementPage from "./ResultsScoreManagementPage";
 import SchoolsPage from "./SchoolsPage";
 import SchoolApplicationsPage from "./SchoolApplicationsPage";
 import SuperAdminSchoolsPage from "./SuperAdminSchoolsPage";
@@ -110,6 +111,14 @@ export default function AppPage({
     page = (
       <ProtectedPage permission="MANAGE_SCHOOLS">
         <ExaminationAssessmentPage />
+      </ProtectedPage>
+    );
+  }
+
+  if (path === "/results-score-management") {
+    page = (
+      <ProtectedPage permission="MANAGE_SCHOOLS">
+        <ResultsScoreManagementPage />
       </ProtectedPage>
     );
   }
