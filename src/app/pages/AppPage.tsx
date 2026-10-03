@@ -3,6 +3,7 @@ import PrincipalDashboardPage from "./PrincipalDashboardPage";
 import SchoolProfileSettingsPage from "./SchoolProfileSettingsPage";
 import ClassAcademicStructurePage from "./ClassAcademicStructurePage";
 import StudentEnrollmentPage from "./StudentEnrollmentPage";
+import TeacherStaffManagementPage from "./TeacherStaffManagementPage";
 import SchoolsPage from "./SchoolsPage";
 import SchoolApplicationsPage from "./SchoolApplicationsPage";
 import SuperAdminSchoolsPage from "./SuperAdminSchoolsPage";
@@ -65,6 +66,14 @@ export default function AppPage({
     page = (
       <ProtectedPage permission="MANAGE_SCHOOLS">
         <StudentEnrollmentPage />
+      </ProtectedPage>
+    );
+  }
+
+  if (path === "/teacher-staff-management") {
+    page = (
+      <ProtectedPage permission="MANAGE_SCHOOLS">
+        <TeacherStaffManagementPage />
       </ProtectedPage>
     );
   }
