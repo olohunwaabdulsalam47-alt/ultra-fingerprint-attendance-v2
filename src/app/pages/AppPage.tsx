@@ -6,6 +6,7 @@ import SuperAdminSubscriptionsPage from "./SuperAdminSubscriptionsPage";
 import SuperAdminPaymentsPage from "./SuperAdminPaymentsPage";
 import SuperAdminUsersPage from "./SuperAdminUsersPage";
 import SuperAdminSecurityPage from "./SuperAdminSecurityPage";
+import SuperAdminAuditCompliancePage from "./SuperAdminAuditCompliancePage";
 import ClassesPage from "./ClassesPage";
 import StudentsPage from "./StudentsPage";
 import AttendancePage from "./AttendancePage";
@@ -68,6 +69,14 @@ export default function AppPage() {
     page = (
       <ProtectedPage permission="VIEW_AUDIT_LOGS">
         <SuperAdminSecurityPage />
+      </ProtectedPage>
+    );
+  }
+
+  if (path === "/superadmin-audit-compliance") {
+    page = (
+      <ProtectedPage permission="VIEW_AUDIT_LOGS">
+        <SuperAdminAuditCompliancePage />
       </ProtectedPage>
     );
   }
