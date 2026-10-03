@@ -58,7 +58,7 @@ function loadUsers(): PlatformUser[] {
       return DEMO_USERS;
     }
 
-    const parsed = JSON.parse(stored);
+    const parsed: unknown = JSON.parse(stored);
 
     if (!Array.isArray(parsed)) {
       return DEMO_USERS;
@@ -107,22 +107,29 @@ export default function SuperAdminUsersPage() {
   const [users, setUsers] = useState<PlatformUser[]>(
     loadUsers,
   );
+
   const [search, setSearch] = useState("");
+
   const [roleFilter, setRoleFilter] = useState<
     "ALL" | PlatformRole
   >("ALL");
+
   const [statusFilter, setStatusFilter] = useState<
     "ALL" | UserStatus
   >("ALL");
+
   const [selectedUser, setSelectedUser] =
     useState<PlatformUser | null>(null);
+
   const [showCreateModal, setShowCreateModal] =
     useState(false);
+
   const [message, setMessage] = useState("");
 
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newPhone, setNewPhone] = useState("");
+
   const [newRole, setNewRole] =
     useState<PlatformRole>("PLATFORM_ADMIN");
 
@@ -172,19 +179,23 @@ export default function SuperAdminUsersPage() {
   }
 
   function toggleStatus(userId: string) {
-    const nextUsers = users.map((user) => {
-      if (user.userId !== userId) {
-        return user;
-      }
+    const nextUsers: PlatformUser[] = users.map(
+      (user): PlatformUser => {
+        if (user.userId !== userId) {
+          return user;
+        }
 
-      return {
-        ...user,
-        status:
+        const nextStatus: UserStatus =
           user.status === "ACTIVE"
             ? "INACTIVE"
-            : "ACTIVE",
-      };
-    });
+            : "ACTIVE";
+
+        return {
+          ...user,
+          status: nextStatus,
+        };
+      },
+    );
 
     updateUsers(nextUsers);
 
@@ -194,6 +205,7 @@ export default function SuperAdminUsersPage() {
 
     if (updatedUser) {
       setSelectedUser(updatedUser);
+
       setMessage(
         `${updatedUser.name} is now ${updatedUser.status.toLowerCase()}.`,
       );
@@ -204,10 +216,11 @@ export default function SuperAdminUsersPage() {
     userId: string,
     role: PlatformRole,
   ) {
-    const nextUsers = users.map((user) =>
-      user.userId === userId
-        ? { ...user, role }
-        : user,
+    const nextUsers: PlatformUser[] = users.map(
+      (user): PlatformUser =>
+        user.userId === userId
+          ? { ...user, role }
+          : user,
     );
 
     updateUsers(nextUsers);
@@ -218,6 +231,7 @@ export default function SuperAdminUsersPage() {
 
     if (updatedUser) {
       setSelectedUser(updatedUser);
+
       setMessage(
         `Role updated to ${ROLE_LABELS[role]}.`,
       );
@@ -270,13 +284,20 @@ export default function SuperAdminUsersPage() {
       createdAt: now,
     };
 
-    const nextUsers = [...users, newUser];
+    const nextUsers: PlatformUser[] = [
+      ...users,
+      newUser,
+    ];
 
     updateUsers(nextUsers);
+
     setShowCreateModal(false);
     setSelectedUser(newUser);
     resetForm();
-    setMessage("Platform user created successfully.");
+
+    setMessage(
+      "Platform user created successfully.",
+    );
   }
 
   return (
@@ -286,7 +307,9 @@ export default function SuperAdminUsersPage() {
           <p className="page-eyebrow">
             PLATFORM ADMINISTRATION
           </p>
+
           <h1>Platform Users & Roles</h1>
+
           <p>
             Manage users who administer and support the
             ULTRA FINGERPRINT ATTENDANCE platform.
@@ -384,6 +407,7 @@ export default function SuperAdminUsersPage() {
         <div className="table-heading">
           <div>
             <h2>Platform Staff</h2>
+
             <span>
               {filteredUsers.length} user
               {filteredUsers.length === 1
@@ -395,7 +419,10 @@ export default function SuperAdminUsersPage() {
 
         {filteredUsers.length === 0 ? (
           <div className="empty-users">
-            <strong>No platform users found</strong>
+            <strong>
+              No platform users found
+            </strong>
+
             <p>
               Try changing your search or filters.
             </p>
@@ -427,8 +454,13 @@ export default function SuperAdminUsersPage() {
                         </div>
 
                         <div>
-                          <strong>{user.name}</strong>
-                          <span>{user.email}</span>
+                          <strong>
+                            {user.name}
+                          </strong>
+
+                          <span>
+                            {user.email}
+                          </span>
                         </div>
                       </div>
                     </td>
@@ -484,6 +516,7 @@ export default function SuperAdminUsersPage() {
                 <p className="page-eyebrow">
                   PLATFORM USER
                 </p>
+
                 <h2>{selectedUser.name}</h2>
               </div>
 
@@ -507,21 +540,34 @@ export default function SuperAdminUsersPage() {
               </div>
 
               <div>
-                <strong>{selectedUser.name}</strong>
-                <span>{selectedUser.email}</span>
-                <span>{selectedUser.phone || "No phone"}</span>
+                <strong>
+                  {selectedUser.name}
+                </strong>
+
+                <span>
+                  {selectedUser.email}
+                </span>
+
+                <span>
+                  {selectedUser.phone ||
+                    "No phone"}
+                </span>
               </div>
             </div>
 
             <div className="user-details-grid">
               <div>
                 <span>User ID</span>
-                <strong>{selectedUser.userId}</strong>
+                <strong>
+                  {selectedUser.userId}
+                </strong>
               </div>
 
               <div>
                 <span>Staff ID</span>
-                <strong>{selectedUser.staffId}</strong>
+                <strong>
+                  {selectedUser.staffId}
+                </strong>
               </div>
 
               <div>
@@ -561,7 +607,10 @@ export default function SuperAdminUsersPage() {
               >
                 {Object.entries(ROLE_LABELS).map(
                   ([role, label]) => (
-                    <option key={role} value={role}>
+                    <option
+                      key={role}
+                      value={role}
+                    >
                       {label}
                     </option>
                   ),
@@ -622,6 +671,7 @@ export default function SuperAdminUsersPage() {
                 <p className="page-eyebrow">
                   PLATFORM ADMINISTRATION
                 </p>
+
                 <h2>Add Platform User</h2>
               </div>
 
@@ -641,6 +691,7 @@ export default function SuperAdminUsersPage() {
             <div className="form-grid">
               <label>
                 Full Name
+
                 <input
                   type="text"
                   value={newName}
@@ -653,6 +704,7 @@ export default function SuperAdminUsersPage() {
 
               <label>
                 Email Address
+
                 <input
                   type="email"
                   value={newEmail}
@@ -665,6 +717,7 @@ export default function SuperAdminUsersPage() {
 
               <label>
                 Phone Number
+
                 <input
                   type="tel"
                   value={newPhone}
@@ -677,6 +730,7 @@ export default function SuperAdminUsersPage() {
 
               <label>
                 Platform Role
+
                 <select
                   value={newRole}
                   onChange={(event) =>
