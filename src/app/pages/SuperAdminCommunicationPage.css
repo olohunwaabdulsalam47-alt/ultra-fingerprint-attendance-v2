@@ -1,0 +1,575 @@
+.communication-page {
+  min-height: 100vh;
+  padding: 32px;
+  background: #f5f7f6;
+  color: #17231d;
+}
+
+.communication-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.communication-eyebrow {
+  display: inline-block;
+  margin-bottom: 8px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #0b6b3a;
+}
+
+.communication-header h1 {
+  margin: 0;
+  font-size: clamp(1.7rem, 3vw, 2.5rem);
+}
+
+.communication-header p {
+  margin: 8px 0 0;
+  color: #64736a;
+  max-width: 720px;
+}
+
+.communication-primary-button,
+.communication-secondary-button,
+.communication-danger-button,
+.communication-action-button,
+.communication-close-button,
+.communication-title-button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.communication-primary-button {
+  border: 0;
+  border-radius: 10px;
+  padding: 11px 17px;
+  background: #0b6b3a;
+  color: #fff;
+  font-weight: 700;
+}
+
+.communication-primary-button:hover {
+  background: #09592f;
+}
+
+.communication-secondary-button {
+  border: 1px solid #ccd6d0;
+  border-radius: 10px;
+  padding: 10px 15px;
+  background: #fff;
+  color: #26362d;
+  font-weight: 600;
+}
+
+.communication-secondary-button:hover {
+  background: #f1f5f2;
+}
+
+.communication-danger-button {
+  border: 1px solid #e2bcbc;
+  border-radius: 10px;
+  padding: 10px 15px;
+  background: #fff;
+  color: #a52d2d;
+  font-weight: 700;
+}
+
+.communication-danger-button:hover {
+  background: #fff2f2;
+}
+
+.communication-stats {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.communication-stat-card {
+  padding: 18px;
+  border: 1px solid #dfe7e2;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(25, 45, 34, 0.04);
+}
+
+.communication-stat-card span {
+  display: block;
+  margin-bottom: 7px;
+  color: #718078;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.communication-stat-card strong {
+  font-size: 1.65rem;
+  line-height: 1;
+}
+
+.communication-overview {
+  margin-bottom: 20px;
+  padding: 22px;
+  border: 1px solid #dfe7e2;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.communication-overview h2 {
+  margin: 0 0 7px;
+  font-size: 1.15rem;
+}
+
+.communication-overview p {
+  margin: 0;
+  color: #64736a;
+  line-height: 1.6;
+}
+
+.communication-toolbar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) repeat(3, minmax(140px, 180px)) auto;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.communication-toolbar input,
+.communication-toolbar select,
+.communication-form input,
+.communication-form textarea,
+.communication-form select {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #ccd6d0;
+  border-radius: 9px;
+  background: #fff;
+  color: #1d2b23;
+  font: inherit;
+}
+
+.communication-toolbar input,
+.communication-toolbar select {
+  min-height: 42px;
+  padding: 9px 11px;
+}
+
+.communication-toolbar input:focus,
+.communication-toolbar select:focus,
+.communication-form input:focus,
+.communication-form textarea:focus,
+.communication-form select:focus {
+  outline: 2px solid rgba(11, 107, 58, 0.16);
+  border-color: #0b6b3a;
+}
+
+.communication-table-card {
+  overflow: hidden;
+  border: 1px solid #dfe7e2;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(25, 45, 34, 0.04);
+}
+
+.communication-table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid #e8ede9;
+}
+
+.communication-table-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.communication-table-header span {
+  display: block;
+  margin-top: 4px;
+  color: #758179;
+  font-size: 0.82rem;
+}
+
+.communication-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.communication-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+}
+
+.communication-table th,
+.communication-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #edf1ee;
+  text-align: left;
+  vertical-align: middle;
+  font-size: 0.88rem;
+}
+
+.communication-table th {
+  background: #f8faf9;
+  color: #5d6c63;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.communication-table tbody tr:hover {
+  background: #fbfcfb;
+}
+
+.communication-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.communication-title-button {
+  display: block;
+  max-width: 320px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #0b6b3a;
+  font-weight: 750;
+  text-align: left;
+}
+
+.communication-title-button:hover {
+  text-decoration: underline;
+}
+
+.communication-table td small {
+  display: block;
+  margin-top: 4px;
+  color: #87928c;
+  font-size: 0.72rem;
+}
+
+.communication-action-button {
+  border: 1px solid #d1dad4;
+  border-radius: 8px;
+  padding: 7px 11px;
+  background: #fff;
+  color: #31503e;
+  font-weight: 700;
+}
+
+.communication-action-button:hover {
+  background: #f2f7f4;
+}
+
+.communication-status,
+.communication-priority,
+.communication-type {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.communication-status-draft {
+  background: #eef1f3;
+  color: #59656c;
+}
+
+.communication-status-published {
+  background: #e4f4e9;
+  color: #16713c;
+}
+
+.communication-status-archived {
+  background: #f0ede8;
+  color: #74695e;
+}
+
+.communication-priority-low {
+  background: #eef3ef;
+  color: #5c6c62;
+}
+
+.communication-priority-normal {
+  background: #e8f0fb;
+  color: #3b5d87;
+}
+
+.communication-priority-high {
+  background: #fff1dc;
+  color: #9a6416;
+}
+
+.communication-priority-urgent {
+  background: #fde7e7;
+  color: #a32929;
+}
+
+.communication-type-general {
+  background: #eef2f0;
+  color: #53635a;
+}
+
+.communication-type-maintenance {
+  background: #fff0d8;
+  color: #8a641e;
+}
+
+.communication-type-security {
+  background: #fbe7e7;
+  color: #9b2e2e;
+}
+
+.communication-type-subscription {
+  background: #e9edfb;
+  color: #4b5892;
+}
+
+.communication-type-payment {
+  background: #e5f3ec;
+  color: #25704a;
+}
+
+.communication-type-system_update {
+  background: #e9f0f7;
+  color: #47647d;
+}
+
+.communication-empty {
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.communication-empty strong {
+  display: block;
+  font-size: 1.05rem;
+}
+
+.communication-empty p {
+  margin: 7px 0 0;
+  color: #748078;
+}
+
+.communication-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(13, 24, 18, 0.52);
+}
+
+.communication-modal {
+  width: min(720px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.22);
+}
+
+.communication-detail-modal {
+  width: min(760px, 100%);
+}
+
+.communication-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 24px;
+  border-bottom: 1px solid #e8ede9;
+}
+
+.communication-modal-header h2 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.communication-close-button {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #d7dfda;
+  border-radius: 50%;
+  background: #fff;
+  color: #536159;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.communication-close-button:hover {
+  background: #f2f5f3;
+}
+
+.communication-form {
+  display: grid;
+  gap: 17px;
+  padding: 24px;
+}
+
+.communication-form label {
+  display: grid;
+  gap: 7px;
+  color: #36463d;
+  font-size: 0.84rem;
+  font-weight: 750;
+}
+
+.communication-form input,
+.communication-form select {
+  min-height: 43px;
+  padding: 9px 11px;
+}
+
+.communication-form textarea {
+  min-height: 150px;
+  resize: vertical;
+  padding: 11px;
+  line-height: 1.5;
+}
+
+.communication-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.communication-form-message {
+  padding: 10px 12px;
+  border: 1px solid #efcaca;
+  border-radius: 9px;
+  background: #fff4f4;
+  color: #9c3030;
+  font-size: 0.84rem;
+}
+
+.communication-form-actions,
+.communication-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 9px;
+  padding-top: 4px;
+}
+
+.communication-detail {
+  padding: 24px;
+}
+
+.communication-detail-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.communication-detail-message {
+  margin: 0 0 24px;
+  color: #334139;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.communication-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+}
+
+.communication-detail-grid div {
+  padding: 13px;
+  border: 1px solid #e3e9e5;
+  border-radius: 10px;
+  background: #fafcfb;
+}
+
+.communication-detail-grid dt {
+  margin-bottom: 5px;
+  color: #758078;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.communication-detail-grid dd {
+  margin: 0;
+  color: #29372f;
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
+.communication-modal-actions {
+  padding: 18px 24px 24px;
+  border-top: 1px solid #e8ede9;
+}
+
+@media (max-width: 1100px) {
+  .communication-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .communication-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .communication-page {
+    padding: 20px 14px;
+  }
+
+  .communication-header {
+    flex-direction: column;
+  }
+
+  .communication-primary-button {
+    width: 100%;
+  }
+
+  .communication-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .communication-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .communication-form-grid,
+  .communication-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .communication-modal-backdrop {
+    align-items: flex-start;
+    padding: 12px;
+  }
+
+  .communication-modal {
+    max-height: calc(100vh - 24px);
+  }
+
+  .communication-modal-header,
+  .communication-detail,
+  .communication-form {
+    padding: 18px;
+  }
+
+  .communication-modal-actions {
+    padding: 16px 18px 18px;
+  }
+}
+
+@media (max-width: 430px) {
+  .communication-stats {
+    grid-template-columns: 1fr;
+  }
+}
