@@ -6,7 +6,6 @@ import {
 import { getSchools } from "../../../data/repositories/schoolRepository";
 import { getStudents } from "../../../data/repositories/studentRepository";
 import { getAttendance } from "../../../data/repositories/attendanceRepository";
-
 import { getAuthSession } from "../auth/authSession";
 
 interface DashboardStats {
@@ -42,27 +41,6 @@ export default function DashboardPage() {
           getAttendance(),
         ]);
 
-        const schoolId =
-          session?.schoolId ?? null;
-
-        const visibleSchools =
-          schoolId
-            ? schools.filter(
-                (school) =>
-                  school.schoolId ===
-                  schoolId,
-              )
-            : schools;
-
-        const visibleStudents =
-          schoolId
-            ? students.filter(
-                (student) =>
-                  student.schoolId ===
-                  schoolId,
-              )
-            : students;
-
         const today =
           new Date()
             .toISOString()
@@ -71,20 +49,17 @@ export default function DashboardPage() {
         const visibleAttendance =
           attendance.filter(
             (record) =>
-              record.date === today &&
-              (!schoolId ||
-                record.schoolId ===
-                  schoolId),
+              record.date === today,
           );
 
         setStats({
-          schools:
-            visibleSchools.length,
-          students:
-            visibleStudents.length,
+          schools: schools.length,
+          students: students.length,
           attendanceToday:
             visibleAttendance.length,
         });
+
+        void session;
       } catch (loadError) {
         setError(
           loadError instanceof Error
