@@ -51,7 +51,7 @@ export default function LoginPage() {
   if (loggedIn) {
     return (
       <AppLayout>
-        <AppPage />
+        <AppPage path="/" />
       </AppLayout>
     );
   }
