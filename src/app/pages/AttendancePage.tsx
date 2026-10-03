@@ -9,6 +9,8 @@ import {
   getAttendance,
   saveAttendance,
 } from "../../../data/repositories/attendanceRepository";
+import { getAuthSession } from "../auth/authSession";
+import { recordAuditEvent } from "../audit/auditService";
 
 export default function AttendancePage() {
   const [records, setRecords] = useState<Attendance[]>([]);
@@ -54,6 +56,13 @@ export default function AttendancePage() {
       return;
     }
 
+    const session = getAuthSession();
+
+    if (!session) {
+      setError("You must be logged in to record attendance.");
+      return;
+    }
+
     const now = new Date().toISOString();
 
     const attendance: Attendance = {
@@ -65,7 +74,7 @@ export default function AttendancePage() {
       status,
       createdAt: now,
       updatedAt: now,
-      createdBy: "current-user",
+      createdBy: session.userId,
     };
 
     if (!isValidAttendance(attendance)) {
@@ -75,6 +84,12 @@ export default function AttendancePage() {
 
     try {
       await saveAttendance(attendance);
+
+      await recordAuditEvent(
+        session.userId,
+        "ATTENDANCE_RECORDED",
+        `Recorded ${attendance.status} attendance for student ${attendance.studentId}.`,
+      );
 
       setSchoolId("");
       setClassId("");
