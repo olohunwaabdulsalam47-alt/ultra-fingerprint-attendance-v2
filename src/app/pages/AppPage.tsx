@@ -10,6 +10,7 @@ import SuperAdminAuditCompliancePage from "./SuperAdminAuditCompliancePage";
 import SuperAdminSupportIncidentPage from "./SuperAdminSupportIncidentPage";
 import SuperAdminCommunicationPage from "./SuperAdminCommunicationPage";
 import SuperAdminOperationsPage from "./SuperAdminOperationsPage";
+import SuperAdminDataPrivacyPage from "./SuperAdminDataPrivacyPage";
 import ClassesPage from "./ClassesPage";
 import StudentsPage from "./StudentsPage";
 import AttendancePage from "./AttendancePage";
@@ -104,6 +105,14 @@ export default function AppPage() {
     page = (
       <ProtectedPage permission="VIEW_AUDIT_LOGS">
         <SuperAdminOperationsPage />
+      </ProtectedPage>
+    );
+  }
+
+  if (path === "/superadmin-data-privacy") {
+    page = (
+      <ProtectedPage permission="VIEW_AUDIT_LOGS">
+        <SuperAdminDataPrivacyPage />
       </ProtectedPage>
     );
   }
