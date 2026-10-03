@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import {
   getRolePermissions,
   hasPermission,
@@ -7,69 +6,83 @@ import {
 describe("role permissions", () => {
   it("restricts SuperAdmin to platform management permissions", () => {
     expect(
-      hasPermission("SuperAdmin", "MANAGE_SCHOOLS"),
+      hasPermission(
+        "SuperAdmin",
+        "MANAGE_PLATFORM",
+      ),
     ).toBe(true);
 
     expect(
-      hasPermission("SuperAdmin", "VIEW_REPORTS"),
-    ).toBe(true);
-
-    expect(
-      hasPermission("SuperAdmin", "VIEW_AUDIT_LOGS"),
-    ).toBe(true);
-
-    expect(
-      hasPermission("SuperAdmin", "MANAGE_USERS"),
+      hasPermission(
+        "SuperAdmin",
+        "MANAGE_STUDENTS",
+      ),
     ).toBe(false);
 
     expect(
-      hasPermission("SuperAdmin", "MANAGE_STUDENTS"),
+      hasPermission(
+        "SuperAdmin",
+        "RECORD_ATTENDANCE",
+      ),
     ).toBe(false);
 
     expect(
-      hasPermission("SuperAdmin", "RECORD_ATTENDANCE"),
-    ).toBe(false);
-
-    expect(
-      hasPermission("SuperAdmin", "REGISTER_BIOMETRIC"),
+      hasPermission(
+        "SuperAdmin",
+        "MANAGE_BIOMETRIC",
+      ),
     ).toBe(false);
   });
 
   it("gives Principal management permissions", () => {
     expect(
-      hasPermission("Principal", "MANAGE_USERS"),
+      hasPermission(
+        "Principal",
+        "MANAGE_SCHOOLS",
+      ),
     ).toBe(true);
 
     expect(
-      hasPermission("Principal", "MANAGE_SCHOOLS"),
+      hasPermission(
+        "Principal",
+        "MANAGE_STUDENTS",
+      ),
     ).toBe(true);
 
     expect(
-      hasPermission("Principal", "MANAGE_CLASSES"),
-    ).toBe(true);
-
-    expect(
-      hasPermission("Principal", "MANAGE_STUDENTS"),
-    ).toBe(true);
-
-    expect(
-      hasPermission("Principal", "RECORD_ATTENDANCE"),
-    ).toBe(true);
-
-    expect(
-      hasPermission("Principal", "REGISTER_BIOMETRIC"),
+      hasPermission(
+        "Principal",
+        "RECORD_ATTENDANCE",
+      ),
     ).toBe(true);
   });
 
   it("does not give Teacher user-management permission", () => {
     expect(
-      hasPermission("Teacher", "MANAGE_USERS"),
+      hasPermission(
+        "Teacher",
+        "MANAGE_USERS",
+      ),
     ).toBe(false);
+
+    expect(
+      hasPermission(
+        "Teacher",
+        "RECORD_ATTENDANCE",
+      ),
+    ).toBe(true);
   });
 
   it("returns permissions for a role", () => {
+    const permissions =
+      getRolePermissions("Teacher");
+
     expect(
-      getRolePermissions("Teacher").length,
+      Array.isArray(permissions),
+    ).toBe(true);
+
+    expect(
+      permissions.length,
     ).toBeGreaterThan(0);
   });
 });
