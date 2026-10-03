@@ -1,0 +1,400 @@
+.report-page {
+  min-height: 100%;
+  padding: 28px;
+  background: #f5f8f6;
+  color: #17251d;
+}
+
+.report-header {
+  margin-bottom: 24px;
+}
+
+.report-eyebrow {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: #087443;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+}
+
+.report-header h1 {
+  margin: 0;
+  font-size: 30px;
+}
+
+.report-header p {
+  margin: 8px 0 0;
+  color: #637168;
+}
+
+.report-message {
+  margin-bottom: 18px;
+  padding: 12px 16px;
+  border: 1px solid #b9e5c8;
+  border-radius: 10px;
+  background: #e7f7ed;
+  color: #075b35;
+  font-weight: 700;
+}
+
+.report-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.report-stat {
+  padding: 20px;
+  border: 1px solid #dbe6df;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.report-stat span,
+.report-summary-grid span,
+.attendance-grid span {
+  display: block;
+  color: #68766e;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.report-stat strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 27px;
+}
+
+.report-card {
+  margin-bottom: 22px;
+  padding: 22px;
+  border: 1px solid #dbe6df;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.04);
+}
+
+.report-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.report-card-header h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.report-card-header p {
+  margin: 6px 0 0;
+  color: #68766e;
+  font-size: 13px;
+}
+
+.report-selection-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 16px;
+}
+
+.report-selection-grid label,
+.remarks-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #34443b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.report-selection-grid input,
+.report-selection-grid select,
+.remarks-grid textarea,
+.remarks-grid select {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #cbd8d0;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #18241d;
+  font: inherit;
+  outline: none;
+}
+
+.remarks-grid textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.report-selection-grid input:focus,
+.report-selection-grid select:focus,
+.remarks-grid textarea:focus,
+.remarks-grid select:focus {
+  border-color: #078047;
+  box-shadow: 0 0 0 3px rgba(7, 128, 71, 0.1);
+}
+
+.report-heading-card {
+  padding: 28px;
+}
+
+.school-report-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding-bottom: 22px;
+  border-bottom: 2px solid #087443;
+  text-align: center;
+}
+
+.school-mark {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  border-radius: 50%;
+  background: #087443;
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.school-report-heading h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.school-report-heading p {
+  margin: 5px 0 0;
+  color: #68766e;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.student-information {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding-top: 22px;
+}
+
+.student-information span {
+  display: block;
+  color: #68766e;
+  font-size: 11px;
+}
+
+.student-information strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 14px;
+}
+
+.report-table-wrap {
+  overflow-x: auto;
+}
+
+.report-table-wrap table {
+  width: 100%;
+  min-width: 750px;
+  border-collapse: collapse;
+}
+
+.report-table-wrap th,
+.report-table-wrap td {
+  padding: 13px 12px;
+  border-bottom: 1px solid #e6ece8;
+  text-align: left;
+}
+
+.report-table-wrap th {
+  background: #f7faf8;
+  color: #536259;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.report-table-wrap td {
+  font-size: 13px;
+}
+
+.grade-badge {
+  display: inline-block;
+  min-width: 24px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: #e7f4ec;
+  color: #087443;
+  font-weight: 900;
+  text-align: center;
+}
+
+.report-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.report-summary-grid .report-card {
+  margin-bottom: 0;
+}
+
+.report-summary-grid strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 24px;
+}
+
+.attendance-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.attendance-grid > div {
+  padding: 16px;
+  border: 1px solid #e2ebe5;
+  border-radius: 10px;
+  background: #f9fbfa;
+}
+
+.attendance-grid strong {
+  display: block;
+  margin-top: 7px;
+  font-size: 21px;
+}
+
+.remarks-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 220px;
+  gap: 16px;
+}
+
+.report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.primary-button,
+.secondary-button {
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 15px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.primary-button {
+  background: #087443;
+  color: #ffffff;
+}
+
+.secondary-button {
+  background: #e9efeb;
+  color: #26362d;
+}
+
+.primary-button:disabled,
+.secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.empty-cell {
+  padding: 35px !important;
+  text-align: center !important;
+  color: #758179;
+}
+
+.report-security-note {
+  padding: 16px;
+  border: 1px solid #d5e4da;
+  border-radius: 12px;
+  background: #edf7f1;
+  color: #365044;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+@media (max-width: 950px) {
+  .report-selection-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .report-stats,
+  .report-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .remarks-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .student-information {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .attendance-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 650px) {
+  .report-page {
+    padding: 16px;
+  }
+
+  .report-header h1 {
+    font-size: 24px;
+  }
+
+  .report-selection-grid,
+  .report-stats,
+  .report-summary-grid,
+  .student-information,
+  .attendance-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .school-report-heading {
+    flex-direction: column;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .report-page {
+    padding: 0;
+    background: #ffffff;
+  }
+
+  .printable-report {
+    width: 100%;
+  }
+
+  .report-card {
+    border: 1px solid #999;
+    box-shadow: none;
+    break-inside: avoid;
+  }
+
+  .report-summary-grid {
+    display: grid;
+  }
+
+  body {
+    background: #ffffff;
+  }
+}
