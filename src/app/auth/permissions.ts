@@ -10,38 +10,39 @@ export type Permission =
   | "VIEW_REPORTS"
   | "VIEW_AUDIT_LOGS"
   | "MANAGE_BIOMETRIC"
-  | "REGISTER_BIOMETRIC";
+  | "REGISTER_BIOMETRIC"
+  | "MANAGE_PLATFORM";
 
-const ROLE_PERMISSIONS: Record<
-  UserRole,
-  Permission[]
-> = {
-  SuperAdmin: [
-    "VIEW_DASHBOARD",
-    "MANAGE_SCHOOLS",
-    "VIEW_REPORTS",
-    "VIEW_AUDIT_LOGS",
-  ],
+const SUPER_ADMIN_PERMISSIONS: Permission[] = [
+  "VIEW_DASHBOARD",
+  "VIEW_REPORTS",
+  "VIEW_AUDIT_LOGS",
+  "MANAGE_PLATFORM",
+];
 
-  Principal: [
-    "VIEW_DASHBOARD",
-    "MANAGE_USERS",
-    "MANAGE_SCHOOLS",
-    "MANAGE_CLASSES",
-    "MANAGE_STUDENTS",
-    "RECORD_ATTENDANCE",
-    "VIEW_REPORTS",
-    "VIEW_AUDIT_LOGS",
-    "MANAGE_BIOMETRIC",
-    "REGISTER_BIOMETRIC",
-  ],
+const PRINCIPAL_PERMISSIONS: Permission[] = [
+  "VIEW_DASHBOARD",
+  "MANAGE_USERS",
+  "MANAGE_SCHOOLS",
+  "MANAGE_CLASSES",
+  "MANAGE_STUDENTS",
+  "RECORD_ATTENDANCE",
+  "VIEW_REPORTS",
+  "VIEW_AUDIT_LOGS",
+  "MANAGE_BIOMETRIC",
+  "REGISTER_BIOMETRIC",
+];
 
-  Teacher: [
-    "VIEW_DASHBOARD",
-    "RECORD_ATTENDANCE",
-    "MANAGE_BIOMETRIC",
-    "REGISTER_BIOMETRIC",
-  ],
+const TEACHER_PERMISSIONS: Permission[] = [
+  "VIEW_DASHBOARD",
+  "RECORD_ATTENDANCE",
+  "REGISTER_BIOMETRIC",
+];
+
+export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
+  SuperAdmin: SUPER_ADMIN_PERMISSIONS,
+  Principal: PRINCIPAL_PERMISSIONS,
+  Teacher: TEACHER_PERMISSIONS,
 };
 
 export function getRolePermissions(
@@ -54,7 +55,5 @@ export function hasPermission(
   role: UserRole,
   permission: Permission,
 ): boolean {
-  return getRolePermissions(role).includes(
-    permission,
-  );
+  return getRolePermissions(role).includes(permission);
 }
