@@ -2,6 +2,7 @@ import DashboardPage from "./DashboardPage";
 import PrincipalDashboardPage from "./PrincipalDashboardPage";
 import SchoolProfileSettingsPage from "./SchoolProfileSettingsPage";
 import ClassAcademicStructurePage from "./ClassAcademicStructurePage";
+import StudentEnrollmentPage from "./StudentEnrollmentPage";
 import SchoolsPage from "./SchoolsPage";
 import SchoolApplicationsPage from "./SchoolApplicationsPage";
 import SuperAdminSchoolsPage from "./SuperAdminSchoolsPage";
@@ -56,6 +57,14 @@ export default function AppPage({
     page = (
       <ProtectedPage permission="MANAGE_SCHOOLS">
         <ClassAcademicStructurePage />
+      </ProtectedPage>
+    );
+  }
+
+  if (path === "/student-enrollment") {
+    page = (
+      <ProtectedPage permission="MANAGE_SCHOOLS">
+        <StudentEnrollmentPage />
       </ProtectedPage>
     );
   }
