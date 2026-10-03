@@ -9,6 +9,7 @@ import SubjectCurriculumPage from "./SubjectCurriculumPage";
 import TimetableSchedulePage from "./TimetableSchedulePage";
 import ExaminationAssessmentPage from "./ExaminationAssessmentPage";
 import ResultsScoreManagementPage from "./ResultsScoreManagementPage";
+import ReportCardsResultsPage from "./ReportCardsResultsPage";
 import SchoolsPage from "./SchoolsPage";
 import SchoolApplicationsPage from "./SchoolApplicationsPage";
 import SuperAdminSchoolsPage from "./SuperAdminSchoolsPage";
@@ -119,6 +120,14 @@ export default function AppPage({
     page = (
       <ProtectedPage permission="MANAGE_SCHOOLS">
         <ResultsScoreManagementPage />
+      </ProtectedPage>
+    );
+  }
+
+  if (path === "/report-cards-results") {
+    page = (
+      <ProtectedPage permission="VIEW_REPORTS">
+        <ReportCardsResultsPage />
       </ProtectedPage>
     );
   }
