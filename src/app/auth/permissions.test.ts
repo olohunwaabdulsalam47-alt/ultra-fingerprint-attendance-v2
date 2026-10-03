@@ -1,4 +1,10 @@
 import {
+  describe,
+  expect,
+  it,
+} from "vitest";
+
+import {
   getRolePermissions,
   hasPermission,
 } from "./permissions";
