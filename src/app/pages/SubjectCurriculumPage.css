@@ -1,0 +1,319 @@
+.subject-curriculum-page {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.subject-curriculum-header {
+  margin-bottom: 24px;
+}
+
+.subject-curriculum-header .eyebrow {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #0b6b3a;
+}
+
+.subject-curriculum-header h1 {
+  margin: 0 0 8px;
+  font-size: 30px;
+}
+
+.subject-curriculum-header p {
+  margin: 0;
+  color: #64748b;
+}
+
+.subject-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.subject-stat-card {
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
+.subject-stat-card span {
+  display: block;
+  color: #64748b;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.subject-stat-card strong {
+  font-size: 28px;
+  color: #0f172a;
+}
+
+.subject-tab-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.subject-tab-bar button {
+  border: 0;
+  background: transparent;
+  padding: 12px 18px;
+  cursor: pointer;
+  color: #64748b;
+  font-weight: 700;
+  border-bottom: 3px solid transparent;
+}
+
+.subject-tab-bar button.active {
+  color: #0b6b3a;
+  border-bottom-color: #0b6b3a;
+}
+
+.subject-form-card,
+.subject-list-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+}
+
+.section-heading {
+  margin-bottom: 18px;
+}
+
+.section-heading h2 {
+  margin: 0 0 5px;
+  font-size: 20px;
+}
+
+.section-heading p {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.form-grid input,
+.form-grid select,
+.toolbar input,
+.toolbar select {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  padding: 11px 12px;
+  background: #ffffff;
+  color: #0f172a;
+  outline: none;
+}
+
+.form-grid input:focus,
+.form-grid select:focus,
+.toolbar input:focus,
+.toolbar select:focus {
+  border-color: #0b6b3a;
+  box-shadow: 0 0 0 3px rgba(11, 107, 58, 0.1);
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.primary-button,
+.secondary-button {
+  border: 0;
+  border-radius: 9px;
+  padding: 11px 17px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary-button {
+  background: #0b6b3a;
+  color: #ffffff;
+}
+
+.secondary-button {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table-wrapper table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 850px;
+}
+
+.table-wrapper th,
+.table-wrapper td {
+  padding: 13px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.table-wrapper th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.table-wrapper td {
+  color: #334155;
+  font-size: 14px;
+}
+
+.table-wrapper td strong {
+  display: block;
+  color: #0f172a;
+}
+
+.table-wrapper td small {
+  display: block;
+  margin-top: 3px;
+  color: #94a3b8;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.status-badge.active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.inactive {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.action-cell {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.action-cell button {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  border-radius: 7px;
+  padding: 7px 9px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.action-cell button:hover {
+  background: #f8fafc;
+}
+
+.action-cell .danger-button {
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.empty-state {
+  text-align: center !important;
+  color: #94a3b8 !important;
+  padding: 30px !important;
+}
+
+.school-boundary-notice {
+  padding: 18px;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  background: #f0fdf4;
+  margin-top: 20px;
+}
+
+.school-boundary-notice strong {
+  color: #166534;
+}
+
+.school-boundary-notice p {
+  margin: 6px 0 0;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+@media (max-width: 900px) {
+  .subject-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .toolbar {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .subject-curriculum-page {
+    padding: 16px;
+  }
+
+  .subject-stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .subject-tab-bar {
+    overflow-x: auto;
+  }
+
+  .subject-tab-bar button {
+    white-space: nowrap;
+  }
+}
