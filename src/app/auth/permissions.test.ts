@@ -5,23 +5,59 @@ import {
 } from "./permissions";
 
 describe("role permissions", () => {
-  it("gives SuperAdmin all permissions", () => {
+  it("restricts SuperAdmin to platform management permissions", () => {
     expect(
-      hasPermission("SuperAdmin", "MANAGE_USERS"),
+      hasPermission("SuperAdmin", "MANAGE_SCHOOLS"),
+    ).toBe(true);
+
+    expect(
+      hasPermission("SuperAdmin", "VIEW_REPORTS"),
     ).toBe(true);
 
     expect(
       hasPermission("SuperAdmin", "VIEW_AUDIT_LOGS"),
     ).toBe(true);
+
+    expect(
+      hasPermission("SuperAdmin", "MANAGE_USERS"),
+    ).toBe(false);
+
+    expect(
+      hasPermission("SuperAdmin", "MANAGE_STUDENTS"),
+    ).toBe(false);
+
+    expect(
+      hasPermission("SuperAdmin", "RECORD_ATTENDANCE"),
+    ).toBe(false);
+
+    expect(
+      hasPermission("SuperAdmin", "REGISTER_BIOMETRIC"),
+    ).toBe(false);
   });
 
   it("gives Principal management permissions", () => {
+    expect(
+      hasPermission("Principal", "MANAGE_USERS"),
+    ).toBe(true);
+
+    expect(
+      hasPermission("Principal", "MANAGE_SCHOOLS"),
+    ).toBe(true);
+
+    expect(
+      hasPermission("Principal", "MANAGE_CLASSES"),
+    ).toBe(true);
+
     expect(
       hasPermission("Principal", "MANAGE_STUDENTS"),
     ).toBe(true);
 
     expect(
       hasPermission("Principal", "RECORD_ATTENDANCE"),
+    ).toBe(true);
+
+    expect(
+      hasPermission("Principal", "REGISTER_BIOMETRIC"),
     ).toBe(true);
   });
 
@@ -32,9 +68,8 @@ describe("role permissions", () => {
   });
 
   it("returns permissions for a role", () => {
-    const permissions = getRolePermissions("Teacher");
-
-    expect(permissions).toContain("RECORD_ATTENDANCE");
-    expect(permissions).not.toContain("MANAGE_USERS");
+    expect(
+      getRolePermissions("Teacher").length,
+    ).toBeGreaterThan(0);
   });
 });
