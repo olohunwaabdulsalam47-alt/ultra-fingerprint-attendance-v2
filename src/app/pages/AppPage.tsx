@@ -12,6 +12,7 @@ import SuperAdminCommunicationPage from "./SuperAdminCommunicationPage";
 import SuperAdminOperationsPage from "./SuperAdminOperationsPage";
 import SuperAdminDataPrivacyPage from "./SuperAdminDataPrivacyPage";
 import SuperAdminAnalyticsToolsPage from "./SuperAdminAnalyticsToolsPage";
+import SuperAdminHardeningPage from "./SuperAdminHardeningPage";
 import ClassesPage from "./ClassesPage";
 import StudentsPage from "./StudentsPage";
 import AttendancePage from "./AttendancePage";
@@ -122,6 +123,14 @@ export default function AppPage() {
     page = (
       <ProtectedPage permission="VIEW_DASHBOARD">
         <SuperAdminAnalyticsToolsPage />
+      </ProtectedPage>
+    );
+  }
+
+  if (path === "/superadmin-hardening") {
+    page = (
+      <ProtectedPage permission="VIEW_AUDIT_LOGS">
+        <SuperAdminHardeningPage />
       </ProtectedPage>
     );
   }
