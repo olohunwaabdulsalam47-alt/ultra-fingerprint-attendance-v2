@@ -1,6 +1,7 @@
 import type { UserRole } from "../../../domain/enums/roles";
 
 export type Permission =
+  | "VIEW_DASHBOARD"
   | "MANAGE_USERS"
   | "MANAGE_SCHOOLS"
   | "MANAGE_CLASSES"
@@ -8,6 +9,7 @@ export type Permission =
   | "RECORD_ATTENDANCE"
   | "VIEW_REPORTS"
   | "VIEW_AUDIT_LOGS"
+  | "MANAGE_BIOMETRIC"
   | "REGISTER_BIOMETRIC";
 
 const ROLE_PERMISSIONS: Record<
@@ -15,12 +17,14 @@ const ROLE_PERMISSIONS: Record<
   Permission[]
 > = {
   SuperAdmin: [
+    "VIEW_DASHBOARD",
     "MANAGE_SCHOOLS",
     "VIEW_REPORTS",
     "VIEW_AUDIT_LOGS",
   ],
 
   Principal: [
+    "VIEW_DASHBOARD",
     "MANAGE_USERS",
     "MANAGE_SCHOOLS",
     "MANAGE_CLASSES",
@@ -28,11 +32,14 @@ const ROLE_PERMISSIONS: Record<
     "RECORD_ATTENDANCE",
     "VIEW_REPORTS",
     "VIEW_AUDIT_LOGS",
+    "MANAGE_BIOMETRIC",
     "REGISTER_BIOMETRIC",
   ],
 
   Teacher: [
+    "VIEW_DASHBOARD",
     "RECORD_ATTENDANCE",
+    "MANAGE_BIOMETRIC",
     "REGISTER_BIOMETRIC",
   ],
 };
