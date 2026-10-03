@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import AppNavigation from "./AppNavigation";
+import AppNavigation from "../navigation/AppNavigation";
 
 interface AppLayoutProps {
   children?: ReactNode;
