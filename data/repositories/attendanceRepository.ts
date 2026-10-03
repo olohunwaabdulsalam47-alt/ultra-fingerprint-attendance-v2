@@ -43,30 +43,40 @@ export async function getAttendance(): Promise<
 > {
   const db = await openDatabase();
 
-  const records = await new Promise<Attendance[]>(
-    (resolve, reject) => {
-      const transaction = db.transaction(
-        STORE_NAME,
-        "readonly",
-      );
-
-      const store = transaction.objectStore(
-        STORE_NAME,
-      );
-
-      const request = store.getAll();
-
-      request.onsuccess = () =>
-        resolve(
-          request.result as Attendance[],
+  const records =
+    await new Promise<Attendance[]>(
+      (resolve, reject) => {
+        const transaction = db.transaction(
+          STORE_NAME,
+          "readonly",
         );
 
-      request.onerror = () =>
-        reject(request.error);
-    },
-  );
+        const store =
+          transaction.objectStore(STORE_NAME);
+
+        const request = store.getAll();
+
+        request.onsuccess = () =>
+          resolve(
+            request.result as Attendance[],
+          );
+
+        request.onerror = () =>
+          reject(request.error);
+      },
+    );
 
   db.close();
 
   return records;
+}
+
+export async function getAttendanceByDate(
+  date: string,
+): Promise<Attendance[]> {
+  const records = await getAttendance();
+
+  return records.filter(
+    (record) => record.date === date,
+  );
 }
