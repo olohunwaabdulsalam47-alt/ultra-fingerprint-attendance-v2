@@ -1,4 +1,5 @@
 import type { AuthSession } from "../../../domain/entities/authSession";
+import { saveTrialLock } from "./trialLock";
 
 const SESSION_KEY =
   "ultra-fingerprint-auth-session";
@@ -41,7 +42,7 @@ function getTrialForSchool(
   }
 }
 
-function expireTrial(
+function markTrialExpired(
   trial: TrialRecord,
 ): void {
   try {
@@ -68,7 +69,7 @@ function expireTrial(
       JSON.stringify(updatedTrials),
     );
   } catch {
-    // Expiry is still enforced by the date check.
+    // Expiry remains enforced by the date.
   }
 }
 
@@ -84,26 +85,46 @@ function isTrialExpired(
   );
 }
 
-function isSessionAllowed(
+function enforceTrialStatus(
   session: AuthSession,
 ): boolean {
+  // SuperAdmin is a platform-level account
+  // and must not be affected by school trials.
+  if (
+    session.role === "SuperAdmin" ||
+    !session.schoolId
+  ) {
+    return true;
+  }
+
   const trial =
     getTrialForSchool(
       session.schoolId,
     );
 
+  // Existing accounts without a trial
+  // remain available.
   if (!trial) {
     return true;
   }
 
   if (
-    isTrialExpired(trial)
+    !isTrialExpired(trial)
   ) {
-    expireTrial(trial);
-    return false;
+    return true;
   }
 
-  return true;
+  markTrialExpired(trial);
+
+  saveTrialLock({
+    schoolId: session.schoolId,
+    userId: session.userId,
+    trialEndsAt: trial.trialEndsAt,
+    lockedAt:
+      new Date().toISOString(),
+  });
+
+  return false;
 }
 
 export function saveAuthSession(
@@ -132,7 +153,7 @@ export function getAuthSession(): AuthSession | null {
       ) as AuthSession;
 
     if (
-      !isSessionAllowed(session)
+      !enforceTrialStatus(session)
     ) {
       clearAuthSession();
       return null;
@@ -140,10 +161,7 @@ export function getAuthSession(): AuthSession | null {
 
     return session;
   } catch {
-    sessionStorage.removeItem(
-      SESSION_KEY,
-    );
-
+    clearAuthSession();
     return null;
   }
 }
