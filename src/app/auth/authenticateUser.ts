@@ -15,7 +15,7 @@ export async function authenticateUser(
   staffId: string,
   password: string,
 ): Promise<AuthenticationResult> {
-  const normalizedStaffId = staffId.trim();
+  const normalizedStaffId = staffId.trim().toLowerCase();
 
   if (!normalizedStaffId || !password) {
     return {
@@ -28,9 +28,9 @@ export async function authenticateUser(
     const users = await getUsers();
 
     const user = users.find(
-      (item) =>
-        item.staffId?.trim().toLowerCase() ===
-        normalizedStaffId.toLowerCase(),
+      (candidate) =>
+        candidate.staffId?.trim().toLowerCase() ===
+          normalizedStaffId,
     );
 
     if (!user) {
@@ -43,7 +43,7 @@ export async function authenticateUser(
     if (user.status !== "active") {
       return {
         success: false,
-        error: "This user account is inactive.",
+        error: "This account is inactive.",
       };
     }
 
@@ -54,8 +54,7 @@ export async function authenticateUser(
     if (!credential) {
       return {
         success: false,
-        error:
-          "This user does not have a password configured.",
+        error: "No password credential is configured for this account.",
       };
     }
 
@@ -73,7 +72,8 @@ export async function authenticateUser(
 
     const session: AuthSession = {
       userId: user.userId,
-      staffId: user.staffId ?? normalizedStaffId,
+      schoolId: user.schoolId,
+      staffId: user.staffId ?? "",
       name: user.name,
       role: user.role,
       loginMethod: "PASSWORD",
@@ -87,7 +87,7 @@ export async function authenticateUser(
   } catch {
     return {
       success: false,
-      error: "Unable to authenticate the user.",
+      error: "Unable to authenticate. Please try again.",
     };
   }
 }
