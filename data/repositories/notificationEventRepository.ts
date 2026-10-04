@@ -73,6 +73,64 @@ export async function getNotificationEvents(): Promise<
   return events;
 }
 
+export async function getNotificationEventById(
+  notificationId: string,
+): Promise<NotificationEvent | null> {
+  const db = await openDatabase();
+
+  const event =
+    await new Promise<NotificationEvent | null>(
+      (resolve, reject) => {
+        const transaction = db.transaction(
+          STORE_NAME,
+          "readonly",
+        );
+
+        const store =
+          transaction.objectStore(
+            STORE_NAME,
+          );
+
+        const request =
+          store.get(notificationId);
+
+        request.onsuccess = () =>
+          resolve(
+            (request.result as
+              | NotificationEvent
+              | undefined) ?? null,
+          );
+
+        request.onerror = () =>
+          reject(request.error);
+      },
+    );
+
+  db.close();
+
+  return event;
+}
+
+export async function getNotificationEventByIdForSchool(
+  notificationId: string,
+  schoolId: string,
+): Promise<NotificationEvent | null> {
+  const event =
+    await getNotificationEventById(
+      notificationId,
+    );
+
+  if (!event) {
+    return null;
+  }
+
+  if (event.schoolId !== schoolId) {
+    return null;
+  }
+
+  return event;
+}
+
 export async function getNotificationEventsByStudent(
   studentId: string,
 ): Promise<NotificationEvent[]> {
@@ -85,15 +143,36 @@ export async function getNotificationEventsByStudent(
   );
 }
 
+export async function getNotificationEventsByStudentAndSchool(
+  studentId: string,
+  schoolId: string,
+): Promise<NotificationEvent[]> {
+  const events =
+    await getNotificationEventsBySchool(
+      schoolId,
+    );
+
+  return events.filter(
+    (event) =>
+      event.studentId === studentId,
+  );
+}
+
 export async function getNotificationEventsBySchool(
   schoolId: string,
 ): Promise<NotificationEvent[]> {
+  const selectedSchoolId = schoolId.trim();
+
+  if (!selectedSchoolId) {
+    return [];
+  }
+
   const events =
     await getNotificationEvents();
 
   return events.filter(
     (event) =>
-      event.schoolId === schoolId,
+      event.schoolId === selectedSchoolId,
   );
 }
 
