@@ -1,7 +1,13 @@
 import type { School } from "../../../domain/entities/school";
 import type { User } from "../../../domain/entities/user";
-import { getSchools, saveSchool } from "../../../data/repositories/schoolRepository";
-import { getUsers, saveUser } from "../../../data/repositories/userRepository";
+import {
+  getSchools,
+  saveSchool,
+} from "../../../data/repositories/schoolRepository";
+import {
+  getUsers,
+  saveUser,
+} from "../../../data/repositories/userRepository";
 import {
   createPasswordCredential,
   getPasswordCredential,
@@ -14,48 +20,67 @@ const DEMO_SCHOOL_ID = "demo-school-001";
 
 export async function ensureDemoAccount(): Promise<void> {
   try {
-    const now = new Date().toISOString();
+    const now =
+      new Date().toISOString();
 
-    const schools = await getSchools();
+    const schools =
+      await getSchools();
 
-    const existingSchool = schools.find(
-      (school) => school.schoolId === DEMO_SCHOOL_ID,
-    );
+    const existingSchool =
+      schools.find(
+        (school) =>
+          school.schoolId ===
+          DEMO_SCHOOL_ID,
+      );
 
     if (!existingSchool) {
       const demoSchool: School = {
-        schoolId: DEMO_SCHOOL_ID,
+        schoolId:
+          DEMO_SCHOOL_ID,
         name: "ULTRA Demo School",
         status: "active",
         createdAt: now,
         updatedAt: now,
       };
 
-      await saveSchool(demoSchool);
+      await saveSchool(
+        demoSchool,
+      );
     }
 
-    const users = await getUsers();
+    const users =
+      await getUsers();
 
-    const existingUser = users.find(
-      (user) =>
-        user.staffId?.trim().toLowerCase() ===
-        DEMO_STAFF_ID.toLowerCase(),
-    );
+    const existingUser =
+      users.find(
+        (user) =>
+          user.staffId
+            ?.trim()
+            .toLowerCase() ===
+          DEMO_STAFF_ID.toLowerCase(),
+      );
 
     if (existingUser) {
       const updatedUser: User = {
         ...existingUser,
+
         schoolId:
-          existingUser.role === "SuperAdmin"
+          existingUser.role ===
+          "SuperAdmin"
             ? existingUser.schoolId
             : DEMO_SCHOOL_ID,
+
         updatedAt: now,
       };
 
-      await saveUser(updatedUser);
+      await saveUser(
+        updatedUser,
+      );
 
       const existingCredential =
-        await getPasswordCredential(existingUser.userId);
+        await getPasswordCredential(
+          existingUser.userId,
+        );
 
       if (!existingCredential) {
         const credential =
@@ -64,24 +89,42 @@ export async function ensureDemoAccount(): Promise<void> {
             DEMO_PASSWORD,
           );
 
-        await savePasswordCredential(credential);
+        await savePasswordCredential(
+          credential,
+        );
       }
 
       return;
     }
 
     const demoUser: User = {
-      userId: "demo-principal-user",
-      schoolId: DEMO_SCHOOL_ID,
+      userId:
+        "demo-principal-user",
+
+      schoolId:
+        DEMO_SCHOOL_ID,
+
       role: "Principal",
-      name: "Demo Principal",
-      staffId: DEMO_STAFF_ID,
-      status: "active",
-      createdAt: now,
-      updatedAt: now,
+
+      name:
+        "Demo Principal",
+
+      staffId:
+        DEMO_STAFF_ID,
+
+      status:
+        "active",
+
+      createdAt:
+        now,
+
+      updatedAt:
+        now,
     };
 
-    await saveUser(demoUser);
+    await saveUser(
+      demoUser,
+    );
 
     const credential =
       await createPasswordCredential(
@@ -89,7 +132,9 @@ export async function ensureDemoAccount(): Promise<void> {
         DEMO_PASSWORD,
       );
 
-    await savePasswordCredential(credential);
+    await savePasswordCredential(
+      credential,
+    );
   } catch (error) {
     console.error(
       "Unable to initialize demo account:",
