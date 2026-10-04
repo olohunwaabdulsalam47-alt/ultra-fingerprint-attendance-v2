@@ -4,9 +4,13 @@ import type {
   GuardianRelationship,
 } from "../../../domain/entities/guardian";
 import {
-  getGuardians,
+  getGuardiansBySchool,
+  getGuardianByIdForSchool,
   saveGuardian,
 } from "../../../data/repositories/guardianRepository";
+import {
+  getStudentByIdForSchool,
+} from "../../../data/repositories/studentRepository";
 import { getAuthSession } from "../auth/authSession";
 
 const RELATIONSHIPS: GuardianRelationship[] = [
@@ -43,19 +47,18 @@ export default function GuardianManagementPage() {
       const session = getAuthSession();
 
       if (!session?.schoolId) {
-        setError("Your account is not assigned to a school.");
+        setGuardians([]);
+        setError(
+          "Your account is not assigned to a school.",
+        );
         return;
       }
 
-      const records = await getGuardians();
-
-      setGuardians(
-        records.filter(
-          (guardian) =>
-            guardian.schoolId === session.schoolId,
-        ),
+      const records = await getGuardiansBySchool(
+        session.schoolId,
       );
 
+      setGuardians(records);
       setError("");
     } catch {
       setError("Unable to load guardian records.");
@@ -82,10 +85,13 @@ export default function GuardianManagementPage() {
     }
 
     if (!session.schoolId) {
-      setError("Your account is not assigned to a school.");
+      setError(
+        "Your account is not assigned to a school.",
+      );
       return;
     }
 
+    const selectedSchoolId = session.schoolId;
     const selectedStudentId = studentId.trim();
     const selectedName = fullName.trim();
     const selectedPhone = phone.trim();
@@ -120,27 +126,40 @@ export default function GuardianManagementPage() {
       return;
     }
 
-    const now = new Date().toISOString();
-
-    const guardian: Guardian = {
-      guardianId: crypto.randomUUID(),
-      schoolId: session.schoolId,
-      studentId: selectedStudentId,
-      fullName: selectedName,
-      relationship,
-      phone: selectedPhone,
-      email: email.trim() || undefined,
-      address: address.trim() || undefined,
-      preferredContactMethod,
-      receiveAttendanceAlerts,
-      receiveAcademicAlerts,
-      receiveGeneralNotifications,
-      status: "active",
-      createdAt: now,
-      updatedAt: now,
-    };
-
     try {
+      const student =
+        await getStudentByIdForSchool(
+          selectedStudentId,
+          selectedSchoolId,
+        );
+
+      if (!student) {
+        setError(
+          "The selected student does not belong to your school.",
+        );
+        return;
+      }
+
+      const now = new Date().toISOString();
+
+      const guardian: Guardian = {
+        guardianId: crypto.randomUUID(),
+        schoolId: selectedSchoolId,
+        studentId: student.studentId,
+        fullName: selectedName,
+        relationship,
+        phone: selectedPhone,
+        email: email.trim() || undefined,
+        address: address.trim() || undefined,
+        preferredContactMethod,
+        receiveAttendanceAlerts,
+        receiveAcademicAlerts,
+        receiveGeneralNotifications,
+        status: "active",
+        createdAt: now,
+        updatedAt: now,
+      };
+
       await saveGuardian(guardian);
 
       setStudentId("");
@@ -168,25 +187,52 @@ export default function GuardianManagementPage() {
     try {
       const session = getAuthSession();
 
-      if (
-        !session?.schoolId ||
-        guardian.schoolId !== session.schoolId
-      ) {
-        setError("You cannot modify this guardian record.");
+      if (!session?.schoolId) {
+        setError(
+          "Your account is not assigned to a school.",
+        );
+        return;
+      }
+
+      const schoolId = session.schoolId;
+
+      const verifiedGuardian =
+        await getGuardianByIdForSchool(
+          guardian.guardianId,
+          schoolId,
+        );
+
+      if (!verifiedGuardian) {
+        setError(
+          "You cannot modify this guardian record.",
+        );
+        return;
+      }
+
+      const student =
+        await getStudentByIdForSchool(
+          verifiedGuardian.studentId,
+          schoolId,
+        );
+
+      if (!student) {
+        setError(
+          "The guardian's student does not belong to your school.",
+        );
         return;
       }
 
       await saveGuardian({
-        ...guardian,
+        ...verifiedGuardian,
         status:
-          guardian.status === "active"
+          verifiedGuardian.status === "active"
             ? "inactive"
             : "active",
         updatedAt: new Date().toISOString(),
       });
 
       setMessage(
-        guardian.status === "active"
+        verifiedGuardian.status === "active"
           ? "Guardian deactivated."
           : "Guardian activated.",
       );
@@ -210,6 +256,11 @@ export default function GuardianManagementPage() {
       <p>
         Register and manage parent/guardian contacts for
         student notifications.
+      </p>
+
+      <p>
+        Guardian records are restricted to your assigned
+        school.
       </p>
 
       <form
