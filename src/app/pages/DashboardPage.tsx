@@ -7,6 +7,7 @@ import { getSchools } from "../../../data/repositories/schoolRepository";
 import { getStudents } from "../../../data/repositories/studentRepository";
 import { getAttendance } from "../../../data/repositories/attendanceRepository";
 import { getAuthSession } from "../auth/authSession";
+import "./DashboardPage.css";
 
 interface DashboardStats {
   schools: number;
@@ -22,15 +23,11 @@ export default function DashboardPage() {
       attendanceToday: 0,
     });
 
-  const [error, setError] =
-    useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function loadDashboard() {
       try {
-        const session =
-          getAuthSession();
-
         const [
           schools,
           students,
@@ -41,15 +38,13 @@ export default function DashboardPage() {
           getAttendance(),
         ]);
 
-        const today =
-          new Date()
-            .toISOString()
-            .slice(0, 10);
+        const today = new Date()
+          .toISOString()
+          .slice(0, 10);
 
         const visibleAttendance =
           attendance.filter(
-            (record) =>
-              record.date === today,
+            (record) => record.date === today,
           );
 
         setStats({
@@ -58,8 +53,6 @@ export default function DashboardPage() {
           attendanceToday:
             visibleAttendance.length,
         });
-
-        void session;
       } catch (loadError) {
         setError(
           loadError instanceof Error
@@ -72,86 +65,165 @@ export default function DashboardPage() {
     void loadDashboard();
   }, []);
 
-  const session =
-    getAuthSession();
+  const session = getAuthSession();
 
   return (
-    <main
-      style={{
-        padding: "24px",
-      }}
-    >
-      <header>
-        <h1>
-          ULTRA FINGERPRINT ATTENDANCE
-        </h1>
+    <main className="dashboard-page">
+      <section className="dashboard-hero">
+        <div className="dashboard-hero-content">
+          <div className="dashboard-brand-badge">
+            UFA
+          </div>
 
-        <p>
-          Welcome,{" "}
-          {session?.name ?? "User"}.
-        </p>
+          <div>
+            <p className="dashboard-eyebrow">
+              SCHOOL MANAGEMENT PORTAL
+            </p>
 
-        <p>
-          Role:{" "}
-          {session?.role ?? "Unknown"}
-        </p>
-      </header>
+            <h1>
+              ULTRA FINGERPRINT
+              <span> ATTENDANCE</span>
+            </h1>
+
+            <p className="dashboard-welcome">
+              Welcome back,{" "}
+              <strong>
+                {session?.name ?? "User"}
+              </strong>
+            </p>
+
+            <div className="dashboard-role">
+              <span className="dashboard-role-dot" />
+              {session?.role ?? "Unknown"}
+            </div>
+          </div>
+        </div>
+
+        <div className="dashboard-hero-decoration">
+          <div className="dashboard-ring dashboard-ring-one" />
+          <div className="dashboard-ring dashboard-ring-two" />
+          <div className="dashboard-ring dashboard-ring-three" />
+        </div>
+      </section>
 
       {error && (
-        <p role="alert">
-          {error}
-        </p>
+        <div
+          className="dashboard-error"
+          role="alert"
+        >
+          <strong>Dashboard Error</strong>
+          <span>{error}</span>
+        </div>
       )}
 
-      <section
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: "16px",
-          marginTop: "24px",
-        }}
-      >
-        <article>
-          <h2>Schools</h2>
-          <strong>
-            {stats.schools}
-          </strong>
+      <section className="dashboard-stats">
+        <article className="dashboard-stat-card">
+          <div className="dashboard-stat-icon">
+            🏫
+          </div>
+
+          <div className="dashboard-stat-content">
+            <p>Schools</p>
+            <strong>{stats.schools}</strong>
+            <span>Registered schools</span>
+          </div>
         </article>
 
-        <article>
-          <h2>Students</h2>
-          <strong>
-            {stats.students}
-          </strong>
+        <article className="dashboard-stat-card">
+          <div className="dashboard-stat-icon">
+            👨‍🎓
+          </div>
+
+          <div className="dashboard-stat-content">
+            <p>Students</p>
+            <strong>{stats.students}</strong>
+            <span>Student records</span>
+          </div>
         </article>
 
-        <article>
-          <h2>
-            Today's Attendance
-          </h2>
-          <strong>
-            {stats.attendanceToday}
-          </strong>
+        <article className="dashboard-stat-card">
+          <div className="dashboard-stat-icon">
+            ✓
+          </div>
+
+          <div className="dashboard-stat-content">
+            <p>Today's Attendance</p>
+            <strong>
+              {stats.attendanceToday}
+            </strong>
+            <span>Attendance records today</span>
+          </div>
         </article>
       </section>
 
-      <section
-        style={{
-          marginTop: "32px",
-        }}
-      >
-        <h2>
-          System Overview
-        </h2>
+      <section className="dashboard-overview">
+        <div className="dashboard-section-heading">
+          <div>
+            <p className="dashboard-section-eyebrow">
+              PLATFORM STATUS
+            </p>
 
-        <p>
-          Attendance, school data,
-          student records and security
-          services are connected to the
-          application data layer.
+            <h2>System Overview</h2>
+          </div>
+
+          <span className="dashboard-status">
+            <span />
+            Connected
+          </span>
+        </div>
+
+        <p className="dashboard-overview-text">
+          Attendance, school data, student
+          records and security services are
+          connected to the application data
+          layer.
         </p>
+
+        <div className="dashboard-services">
+          <div className="dashboard-service">
+            <span className="dashboard-service-check">
+              ✓
+            </span>
+
+            <div>
+              <strong>Attendance System</strong>
+              <p>Operational</p>
+            </div>
+          </div>
+
+          <div className="dashboard-service">
+            <span className="dashboard-service-check">
+              ✓
+            </span>
+
+            <div>
+              <strong>Student Records</strong>
+              <p>Operational</p>
+            </div>
+          </div>
+
+          <div className="dashboard-service">
+            <span className="dashboard-service-check">
+              ✓
+            </span>
+
+            <div>
+              <strong>Security Services</strong>
+              <p>Protected</p>
+            </div>
+          </div>
+        </div>
       </section>
+
+      <footer className="dashboard-footer">
+        <span>
+          ULTRA FINGERPRINT ATTENDANCE
+        </span>
+
+        <span>
+          Secure School Management Platform
+        </span>
+      </footer>
     </main>
   );
 }
