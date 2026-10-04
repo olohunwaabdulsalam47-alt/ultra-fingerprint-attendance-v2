@@ -3,8 +3,16 @@ import {
   type ReactNode,
 } from "react";
 import type { Permission } from "./permissions";
-import { getAuthSession } from "./authSession";
-import { hasPermission } from "./permissions";
+import {
+  getAuthSession,
+} from "./authSession";
+import {
+  getTrialLock,
+} from "./trialLock";
+import {
+  hasPermission,
+} from "./permissions";
+import TrialExpiredPage from "../pages/TrialExpiredPage";
 
 interface ProtectedPageProps {
   permission: Permission;
@@ -15,20 +23,52 @@ export default function ProtectedPage({
   permission,
   children,
 }: ProtectedPageProps) {
-  const session = getAuthSession();
+  const session =
+    getAuthSession();
+
+  const trialLock =
+    getTrialLock();
 
   useEffect(() => {
-    if (!session) {
-      window.history.replaceState({}, "", "/login");
-      window.dispatchEvent(new PopStateEvent("popstate"));
+    if (
+      !session &&
+      trialLock
+    ) {
+      return;
     }
-  }, [session]);
+
+    if (!session) {
+      window.history.replaceState(
+        {},
+        "",
+        "/login",
+      );
+
+      window.dispatchEvent(
+        new PopStateEvent(
+          "popstate",
+        ),
+      );
+    }
+  }, [session, trialLock]);
+
+  if (
+    !session &&
+    trialLock
+  ) {
+    return <TrialExpiredPage />;
+  }
 
   if (!session) {
     return null;
   }
 
-  if (!hasPermission(session.role, permission)) {
+  if (
+    !hasPermission(
+      session.role,
+      permission,
+    )
+  ) {
     return (
       <section
         style={{
@@ -37,11 +77,14 @@ export default function ProtectedPage({
           margin: "0 auto",
         }}
       >
-        <h1>Access Denied</h1>
+        <h1>
+          Access Denied
+        </h1>
 
         <p>
-          Your account does not have permission to
-          access this section.
+          Your account does not have
+          permission to access this
+          section.
         </p>
 
         <button
@@ -52,8 +95,11 @@ export default function ProtectedPage({
               "",
               "/",
             );
+
             window.dispatchEvent(
-              new PopStateEvent("popstate"),
+              new PopStateEvent(
+                "popstate",
+              ),
             );
           }}
         >
