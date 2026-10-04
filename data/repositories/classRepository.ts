@@ -70,3 +70,68 @@ export async function getClasses(): Promise<
 
   return classes;
 }
+
+export async function getClassesBySchool(
+  schoolId: string,
+): Promise<SchoolClass[]> {
+  const classes = await getClasses();
+
+  return classes.filter(
+    (schoolClass) =>
+      schoolClass.schoolId === schoolId &&
+      schoolClass.status === "active",
+  );
+}
+
+export async function getClassById(
+  classId: string,
+): Promise<SchoolClass | null> {
+  const db = await openDatabase();
+
+  const schoolClass =
+    await new Promise<SchoolClass | null>(
+      (resolve, reject) => {
+        const transaction = db.transaction(
+          STORE_NAME,
+          "readonly",
+        );
+
+        const store =
+          transaction.objectStore(STORE_NAME);
+
+        const request = store.get(classId);
+
+        request.onsuccess = () =>
+          resolve(
+            (request.result as
+              | SchoolClass
+              | undefined) ?? null,
+          );
+
+        request.onerror = () =>
+          reject(request.error);
+      },
+    );
+
+  db.close();
+
+  return schoolClass;
+}
+
+export async function getClassByIdForSchool(
+  classId: string,
+  schoolId: string,
+): Promise<SchoolClass | null> {
+  const schoolClass =
+    await getClassById(classId);
+
+  if (!schoolClass) {
+    return null;
+  }
+
+  if (schoolClass.schoolId !== schoolId) {
+    return null;
+  }
+
+  return schoolClass;
+}
