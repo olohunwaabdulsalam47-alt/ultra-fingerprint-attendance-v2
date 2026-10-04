@@ -36,27 +36,51 @@ async function hashPassword(
     ["deriveBits"],
   );
 
-  const saltBuffer = new ArrayBuffer(salt.byteLength);
-  new Uint8Array(saltBuffer).set(salt);
-
-  const derivedBits = await crypto.subtle.deriveBits(
-    {
-      name: "PBKDF2",
-      salt: saltBuffer,
-      iterations: 100_000,
-      hash: "SHA-256",
-    },
-    keyMaterial,
-    256,
+  const saltBuffer = new ArrayBuffer(
+    salt.byteLength,
   );
 
-  return toBase64(new Uint8Array(derivedBits));
+  new Uint8Array(saltBuffer).set(salt);
+
+  const derivedBits =
+    await crypto.subtle.deriveBits(
+      {
+        name: "PBKDF2",
+        salt: saltBuffer,
+        iterations: 100_000,
+        hash: "SHA-256",
+      },
+      keyMaterial,
+      256,
+    );
+
+  return toBase64(
+    new Uint8Array(derivedBits),
+  );
+}
+
+function getCredentialKey(
+  userId: string,
+): string {
+  const selectedUserId = userId.trim();
+
+  if (!selectedUserId) {
+    throw new Error("User ID is required.");
+  }
+
+  return `password:${selectedUserId}`;
 }
 
 export async function createPasswordCredential(
   userId: string,
   password: string,
 ): Promise<PasswordCredential> {
+  const selectedUserId = userId.trim();
+
+  if (!selectedUserId) {
+    throw new Error("User ID is required.");
+  }
+
   if (!password) {
     throw new Error("Password is required.");
   }
@@ -65,15 +89,17 @@ export async function createPasswordCredential(
     new Uint8Array(16),
   );
 
-  const passwordHash = await hashPassword(
-    password,
-    salt,
-  );
+  const passwordHash =
+    await hashPassword(
+      password,
+      salt,
+    );
 
-  const now = new Date().toISOString();
+  const now =
+    new Date().toISOString();
 
   return {
-    userId,
+    userId: selectedUserId,
     salt: toBase64(salt),
     passwordHash,
     createdAt: now,
@@ -84,31 +110,56 @@ export async function createPasswordCredential(
 export async function savePasswordCredential(
   credential: PasswordCredential,
 ): Promise<void> {
+  if (!credential.userId.trim()) {
+    throw new Error("User ID is required.");
+  }
+
+  if (
+    !credential.salt ||
+    !credential.passwordHash
+  ) {
+    throw new Error(
+      "Invalid password credential.",
+    );
+  }
+
   const db = await openDatabase();
 
-  await new Promise<void>((resolve, reject) => {
-    const transaction = db.transaction(
-      STORE_NAME,
-      "readwrite",
-    );
+  await new Promise<void>(
+    (resolve, reject) => {
+      const transaction =
+        db.transaction(
+          STORE_NAME,
+          "readwrite",
+        );
 
-    const store = transaction.objectStore(STORE_NAME);
+      const store =
+        transaction.objectStore(
+          STORE_NAME,
+        );
 
-    store.put(
-      credential,
-      `password:${credential.userId}`,
-    );
-
-    transaction.oncomplete = () => resolve();
-
-    transaction.onerror = () => reject(transaction.error);
-
-    transaction.onabort = () =>
-      reject(
-        transaction.error ??
-          new Error("Transaction aborted"),
+      store.put(
+        credential,
+        getCredentialKey(
+          credential.userId,
+        ),
       );
-  });
+
+      transaction.oncomplete =
+        () => resolve();
+
+      transaction.onerror = () =>
+        reject(transaction.error);
+
+      transaction.onabort = () =>
+        reject(
+          transaction.error ??
+            new Error(
+              "Transaction aborted",
+            ),
+        );
+    },
+  );
 
   db.close();
 }
@@ -119,27 +170,46 @@ export async function getPasswordCredential(
   const db = await openDatabase();
 
   const credential =
-    await new Promise<PasswordCredential | null>(
+    await new Promise<
+      PasswordCredential | null
+    >(
       (resolve, reject) => {
-        const transaction = db.transaction(
-          STORE_NAME,
-          "readonly",
-        );
+        const transaction =
+          db.transaction(
+            STORE_NAME,
+            "readonly",
+          );
 
-        const store = transaction.objectStore(
-          STORE_NAME,
-        );
+        const store =
+          transaction.objectStore(
+            STORE_NAME,
+          );
 
-        const request = store.get(
-          `password:${userId}`,
-        );
+        const request =
+          store.get(
+            getCredentialKey(userId),
+          );
 
         request.onsuccess = () => {
-          resolve(
-            (request.result as
+          const result =
+            request.result as
               | PasswordCredential
-              | undefined) ?? null,
-          );
+              | undefined;
+
+          if (!result) {
+            resolve(null);
+            return;
+          }
+
+          if (
+            result.userId !==
+            userId.trim()
+          ) {
+            resolve(null);
+            return;
+          }
+
+          resolve(result);
         };
 
         request.onerror = () =>
@@ -152,16 +222,49 @@ export async function getPasswordCredential(
   return credential;
 }
 
+export async function hasPasswordCredential(
+  userId: string,
+): Promise<boolean> {
+  const credential =
+    await getPasswordCredential(
+      userId,
+    );
+
+  return credential !== null;
+}
+
 export async function verifyPassword(
   password: string,
   credential: PasswordCredential,
 ): Promise<boolean> {
-  const salt = fromBase64(credential.salt);
+  if (!password) {
+    return false;
+  }
 
-  const passwordHash = await hashPassword(
-    password,
-    salt,
+  if (!credential.userId.trim()) {
+    return false;
+  }
+
+  if (
+    !credential.salt ||
+    !credential.passwordHash
+  ) {
+    return false;
+  }
+
+  const salt =
+    fromBase64(
+      credential.salt,
+    );
+
+  const passwordHash =
+    await hashPassword(
+      password,
+      salt,
+    );
+
+  return (
+    passwordHash ===
+    credential.passwordHash
   );
-
-  return passwordHash === credential.passwordHash;
 }
