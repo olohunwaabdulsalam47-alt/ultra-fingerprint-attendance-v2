@@ -1,5 +1,6 @@
 export const DATABASE_NAME = "ultra-fingerprint-attendance";
-export const DATABASE_VERSION = 1;
+
+export const DATABASE_VERSION = 2;
 
 export const STORE_NAMES = {
   SCHOOLS: "schools",
@@ -12,6 +13,9 @@ export const STORE_NAMES = {
   OFFLINE_OPERATIONS: "offlineOperations",
   CONFIGURATION: "configuration",
   SCHEMA_METADATA: "schemaMetadata",
+
+  GUARDIANS: "guardians",
+  NOTIFICATION_EVENTS: "notificationEvents",
 } as const;
 
 export type StoreName =
