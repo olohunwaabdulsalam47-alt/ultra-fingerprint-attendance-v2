@@ -11,6 +11,9 @@ import {
 } from "../../../data/repositories/attendanceRepository";
 import { getAuthSession } from "../auth/authSession";
 import { recordAuditEvent } from "../audit/auditService";
+import {
+  createAttendanceNotificationEvents,
+} from "../notifications/attendanceNotificationService";
 
 export default function AttendancePage() {
   const [records, setRecords] = useState<Attendance[]>([]);
@@ -21,6 +24,8 @@ export default function AttendancePage() {
     ATTENDANCE_STATUSES.PRESENT,
   );
   const [error, setError] = useState("");
+  const [notificationMessage, setNotificationMessage] =
+    useState("");
 
   async function loadAttendance() {
     try {
@@ -40,6 +45,9 @@ export default function AttendancePage() {
     const selectedSchoolId = schoolId.trim();
     const selectedClassId = classId.trim();
     const selectedStudentId = studentId.trim();
+
+    setError("");
+    setNotificationMessage("");
 
     if (!selectedSchoolId) {
       setError("School ID is required.");
@@ -83,7 +91,25 @@ export default function AttendancePage() {
     }
 
     try {
+      // Attendance is saved first and remains authoritative.
       await saveAttendance(attendance);
+
+      let notificationCount = 0;
+
+      try {
+        const notificationEvents =
+          await createAttendanceNotificationEvents(
+            attendance.schoolId,
+            attendance.studentId,
+            attendance.studentId,
+            attendance.status,
+          );
+
+        notificationCount = notificationEvents.length;
+      } catch {
+        // Notification failure must not invalidate
+        // a successfully recorded attendance record.
+      }
 
       await recordAuditEvent(
         session.userId,
@@ -95,6 +121,16 @@ export default function AttendancePage() {
       setClassId("");
       setStudentId("");
       setStatus(ATTENDANCE_STATUSES.PRESENT);
+
+      if (notificationCount > 0) {
+        setNotificationMessage(
+          `Attendance recorded. ${notificationCount} parent/guardian notification event(s) created.`,
+        );
+      } else {
+        setNotificationMessage(
+          "Attendance recorded. No parent/guardian notification event was created.",
+        );
+      }
 
       await loadAttendance();
     } catch {
@@ -180,6 +216,12 @@ export default function AttendancePage() {
       </form>
 
       {error && <p role="alert">{error}</p>}
+
+      {notificationMessage && (
+        <p role="status">
+          {notificationMessage}
+        </p>
+      )}
 
       <h3>Attendance Records</h3>
 
