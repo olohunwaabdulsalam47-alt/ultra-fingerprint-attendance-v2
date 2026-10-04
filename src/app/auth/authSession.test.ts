@@ -9,6 +9,7 @@ import type { AuthSession } from "../../../domain/entities/authSession";
 
 const session: AuthSession = {
   userId: "user-1",
+  schoolId: "school-001",
   staffId: "STAFF001",
   name: "Test User",
   role: "Teacher",
