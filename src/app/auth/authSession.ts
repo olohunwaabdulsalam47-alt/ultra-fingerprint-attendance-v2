@@ -1,35 +1,34 @@
 import type { AuthSession } from "../../../domain/entities/authSession";
 
-const AUTH_SESSION_KEY =
+const SESSION_KEY =
   "ultra-fingerprint-auth-session";
 
 export function saveAuthSession(
   session: AuthSession,
 ): void {
   sessionStorage.setItem(
-    AUTH_SESSION_KEY,
+    SESSION_KEY,
     JSON.stringify(session),
   );
 }
 
 export function getAuthSession(): AuthSession | null {
-  const savedSession =
-    sessionStorage.getItem(AUTH_SESSION_KEY);
+  const value = sessionStorage.getItem(SESSION_KEY);
 
-  if (!savedSession) {
+  if (!value) {
     return null;
   }
 
   try {
-    return JSON.parse(savedSession) as AuthSession;
+    return JSON.parse(value) as AuthSession;
   } catch {
-    sessionStorage.removeItem(AUTH_SESSION_KEY);
+    sessionStorage.removeItem(SESSION_KEY);
     return null;
   }
 }
 
 export function clearAuthSession(): void {
-  sessionStorage.removeItem(AUTH_SESSION_KEY);
+  sessionStorage.removeItem(SESSION_KEY);
 }
 
 export function isAuthenticated(): boolean {
