@@ -40,8 +40,22 @@ export default function GuardianManagementPage() {
 
   async function loadGuardians() {
     try {
+      const session = getAuthSession();
+
+      if (!session?.schoolId) {
+        setError("Your account is not assigned to a school.");
+        return;
+      }
+
       const records = await getGuardians();
-      setGuardians(records);
+
+      setGuardians(
+        records.filter(
+          (guardian) =>
+            guardian.schoolId === session.schoolId,
+        ),
+      );
+
       setError("");
     } catch {
       setError("Unable to load guardian records.");
@@ -52,7 +66,9 @@ export default function GuardianManagementPage() {
     void loadGuardians();
   }, []);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
 
     setError("");
@@ -62,6 +78,11 @@ export default function GuardianManagementPage() {
 
     if (!session) {
       setError("You must be logged in.");
+      return;
+    }
+
+    if (!session.schoolId) {
+      setError("Your account is not assigned to a school.");
       return;
     }
 
@@ -79,8 +100,13 @@ export default function GuardianManagementPage() {
       return;
     }
 
-    if (!selectedPhone && preferredContactMethod !== "EMAIL") {
-      setError("Phone number is required for SMS or WhatsApp.");
+    if (
+      !selectedPhone &&
+      preferredContactMethod !== "EMAIL"
+    ) {
+      setError(
+        "Phone number is required for SMS or WhatsApp.",
+      );
       return;
     }
 
@@ -88,7 +114,9 @@ export default function GuardianManagementPage() {
       preferredContactMethod === "EMAIL" &&
       !email.trim()
     ) {
-      setError("Email address is required for email notifications.");
+      setError(
+        "Email address is required for email notifications.",
+      );
       return;
     }
 
@@ -96,7 +124,7 @@ export default function GuardianManagementPage() {
 
     const guardian: Guardian = {
       guardianId: crypto.randomUUID(),
-      schoolId: "school-pending",
+      schoolId: session.schoolId,
       studentId: selectedStudentId,
       fullName: selectedName,
       relationship,
@@ -138,6 +166,16 @@ export default function GuardianManagementPage() {
     guardian: Guardian,
   ) {
     try {
+      const session = getAuthSession();
+
+      if (
+        !session?.schoolId ||
+        guardian.schoolId !== session.schoolId
+      ) {
+        setError("You cannot modify this guardian record.");
+        return;
+      }
+
       await saveGuardian({
         ...guardian,
         status:
@@ -277,7 +315,9 @@ export default function GuardianManagementPage() {
               )
             }
           >
-            <option value="WHATSAPP">WhatsApp</option>
+            <option value="WHATSAPP">
+              WhatsApp
+            </option>
             <option value="SMS">SMS</option>
             <option value="EMAIL">Email</option>
           </select>
@@ -322,13 +362,9 @@ export default function GuardianManagementPage() {
           Receive general notifications
         </label>
 
-        {error && (
-          <p role="alert">{error}</p>
-        )}
+        {error && <p role="alert">{error}</p>}
 
-        {message && (
-          <p role="status">{message}</p>
-        )}
+        {message && <p role="status">{message}</p>}
 
         <button type="submit">
           Register Guardian
@@ -339,7 +375,9 @@ export default function GuardianManagementPage() {
         <h2>Guardian Records</h2>
 
         {guardians.length === 0 ? (
-          <p>No guardian records have been added yet.</p>
+          <p>
+            No guardian records have been added yet.
+          </p>
         ) : (
           <div
             style={{
@@ -367,7 +405,8 @@ export default function GuardianManagementPage() {
                 </p>
 
                 <p>
-                  Contact: {guardian.preferredContactMethod}
+                  Contact:{" "}
+                  {guardian.preferredContactMethod}
                 </p>
 
                 <p>
