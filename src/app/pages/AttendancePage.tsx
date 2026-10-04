@@ -9,6 +9,12 @@ import {
   getAttendance,
   saveAttendance,
 } from "../../../data/repositories/attendanceRepository";
+import {
+  getClassByIdForSchool,
+} from "../../../data/repositories/classRepository";
+import {
+  getStudentByIdForSchool,
+} from "../../../data/repositories/studentRepository";
 import { getAuthSession } from "../auth/authSession";
 import { recordAuditEvent } from "../audit/auditService";
 import {
@@ -17,7 +23,6 @@ import {
 
 export default function AttendancePage() {
   const [records, setRecords] = useState<Attendance[]>([]);
-  const [schoolId, setSchoolId] = useState("");
   const [classId, setClassId] = useState("");
   const [studentId, setStudentId] = useState("");
   const [status, setStatus] = useState<AttendanceStatus>(
@@ -29,8 +34,32 @@ export default function AttendancePage() {
 
   async function loadAttendance() {
     try {
+      const session = getAuthSession();
+
+      if (!session) {
+        setRecords([]);
+        setError(
+          "You must be logged in to view attendance records.",
+        );
+        return;
+      }
+
+      if (!session.schoolId) {
+        setRecords([]);
+        setError(
+          "Your account is not assigned to a school.",
+        );
+        return;
+      }
+
       const savedRecords = await getAttendance();
-      setRecords(savedRecords);
+
+      const schoolRecords = savedRecords.filter(
+        (record) =>
+          record.schoolId === session.schoolId,
+      );
+
+      setRecords(schoolRecords);
       setError("");
     } catch {
       setError("Unable to load attendance records.");
@@ -42,17 +71,11 @@ export default function AttendancePage() {
   }, []);
 
   async function handleRecordAttendance() {
-    const selectedSchoolId = schoolId.trim();
     const selectedClassId = classId.trim();
     const selectedStudentId = studentId.trim();
 
     setError("");
     setNotificationMessage("");
-
-    if (!selectedSchoolId) {
-      setError("School ID is required.");
-      return;
-    }
 
     if (!selectedClassId) {
       setError("Class ID is required.");
@@ -67,30 +90,74 @@ export default function AttendancePage() {
     const session = getAuthSession();
 
     if (!session) {
-      setError("You must be logged in to record attendance.");
+      setError(
+        "You must be logged in to record attendance.",
+      );
       return;
     }
 
-    const now = new Date().toISOString();
-
-    const attendance: Attendance = {
-      attendanceId: crypto.randomUUID(),
-      schoolId: selectedSchoolId,
-      classId: selectedClassId,
-      studentId: selectedStudentId,
-      date: new Date().toISOString().slice(0, 10),
-      status,
-      createdAt: now,
-      updatedAt: now,
-      createdBy: session.userId,
-    };
-
-    if (!isValidAttendance(attendance)) {
-      setError("Invalid attendance data.");
+    if (!session.schoolId) {
+      setError(
+        "Your account is not assigned to a school.",
+      );
       return;
     }
+
+    const schoolId = session.schoolId;
 
     try {
+      const schoolClass =
+        await getClassByIdForSchool(
+          selectedClassId,
+          schoolId,
+        );
+
+      if (!schoolClass) {
+        setError(
+          "The selected class does not belong to your school.",
+        );
+        return;
+      }
+
+      const student =
+        await getStudentByIdForSchool(
+          selectedStudentId,
+          schoolId,
+        );
+
+      if (!student) {
+        setError(
+          "The selected student does not belong to your school.",
+        );
+        return;
+      }
+
+      if (student.classId !== selectedClassId) {
+        setError(
+          "The selected student does not belong to the selected class.",
+        );
+        return;
+      }
+
+      const now = new Date().toISOString();
+
+      const attendance: Attendance = {
+        attendanceId: crypto.randomUUID(),
+        schoolId,
+        classId: selectedClassId,
+        studentId: selectedStudentId,
+        date: new Date().toISOString().slice(0, 10),
+        status,
+        createdAt: now,
+        updatedAt: now,
+        createdBy: session.userId,
+      };
+
+      if (!isValidAttendance(attendance)) {
+        setError("Invalid attendance data.");
+        return;
+      }
+
       // Attendance is saved first and remains authoritative.
       await saveAttendance(attendance);
 
@@ -101,7 +168,7 @@ export default function AttendancePage() {
           await createAttendanceNotificationEvents(
             attendance.schoolId,
             attendance.studentId,
-            attendance.studentId,
+            student.name,
             attendance.status,
           );
 
@@ -114,10 +181,9 @@ export default function AttendancePage() {
       await recordAuditEvent(
         session.userId,
         "ATTENDANCE_RECORDED",
-        `Recorded ${attendance.status} attendance for student ${attendance.studentId}.`,
+        `Recorded ${attendance.status} attendance for student ${student.studentId}.`,
       );
 
-      setSchoolId("");
       setClassId("");
       setStudentId("");
       setStatus(ATTENDANCE_STATUSES.PRESENT);
@@ -142,25 +208,17 @@ export default function AttendancePage() {
     <section>
       <h2>Attendance Management</h2>
 
+      <p>
+        Attendance is automatically recorded under your
+        assigned school.
+      </p>
+
       <form
         onSubmit={(event) => {
           event.preventDefault();
           void handleRecordAttendance();
         }}
       >
-        <label>
-          School ID
-          <input
-            type="text"
-            value={schoolId}
-            onChange={(event) =>
-              setSchoolId(event.target.value)
-            }
-            placeholder="Enter School ID"
-            required
-          />
-        </label>
-
         <label>
           Class ID
           <input
