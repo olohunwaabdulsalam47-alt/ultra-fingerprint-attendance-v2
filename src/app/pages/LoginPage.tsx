@@ -1,171 +1,190 @@
-import {
-  FormEvent,
-  useEffect,
-  useState,
-} from "react";
-
-import AppPage from "./AppPage";
-
-import {
-  getAuthSession,
-  saveAuthSession,
-} from "../auth/authSession";
-
+import { useEffect, useState } from "react";
 import { authenticateUser } from "../auth/authenticateUser";
-
+import { getAuthSession, saveAuthSession } from "../auth/authSession";
+import AppPage from "./AppPage";
 import "./LoginPage.css";
 
 export default function LoginPage() {
-  const [staffId, setStaffId] =
-    useState("");
-
-  const [password, setPassword] =
-    useState("");
-
-  const [error, setError] =
-    useState("");
-
-  const [loggedIn, setLoggedIn] =
-    useState(false);
-
-  const [path, setPath] =
-    useState(window.location.pathname);
+  const [staffId, setStaffId] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [authenticated, setAuthenticated] = useState(
+    getAuthSession() !== null,
+  );
 
   useEffect(() => {
-    const session =
-      getAuthSession();
-
-    if (session) {
-      setLoggedIn(true);
-    }
-
     const handleNavigation = () => {
-      setPath(
-        window.location.pathname,
-      );
+      setAuthenticated(getAuthSession() !== null);
     };
 
-    window.addEventListener(
-      "popstate",
-      handleNavigation,
-    );
+    window.addEventListener("popstate", handleNavigation);
 
     return () => {
-      window.removeEventListener(
-        "popstate",
-        handleNavigation,
-      );
+      window.removeEventListener("popstate", handleNavigation);
     };
   }, []);
 
-  async function handleSubmit(
-    event: FormEvent<HTMLFormElement>,
-  ) {
+  if (authenticated) {
+    return <AppPage path="/" />;
+  }
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     setError("");
 
-    const result =
-      await authenticateUser(
-        staffId.trim(),
-        password,
-      );
-
-    if (!result.success) {
-      setError(
-        result.error ??
-          "Login failed.",
-      );
+    if (!staffId.trim() || !password) {
+      setError("Staff ID and password are required.");
       return;
     }
 
-    if (!result.session) {
-      setError(
-        "Authentication succeeded but no session was created.",
-      );
-      return;
+    setLoading(true);
+
+    try {
+      const result = await authenticateUser(staffId, password);
+
+      if (!result.success || !result.session) {
+        setError(result.error ?? "Invalid Staff ID or password.");
+        return;
+      }
+
+      saveAuthSession(result.session);
+      setAuthenticated(true);
+    } catch {
+      setError("Unable to sign in. Please try again.");
+    } finally {
+      setLoading(false);
     }
-
-    saveAuthSession(
-      result.session,
-    );
-
-    window.history.replaceState(
-      {},
-      "",
-      "/",
-    );
-
-    window.dispatchEvent(
-      new PopStateEvent("popstate"),
-    );
-
-    setPath("/");
-    setLoggedIn(true);
   }
 
-  if (loggedIn) {
-    return (
-      <AppPage path={path} />
-    );
+  function returnHome() {
+    window.history.pushState({}, "", "/");
+    window.dispatchEvent(new PopStateEvent("popstate"));
   }
 
   return (
     <main className="login-page">
-      <section className="login-card">
-        <h1>
-          ULTRA FINGERPRINT ATTENDANCE
-        </h1>
+      <div className="login-background-shape login-background-shape-one" />
+      <div className="login-background-shape login-background-shape-two" />
 
-        <p>
-          Secure School Attendance Platform
-        </p>
+      <section className="login-shell">
+        <div className="login-brand-panel">
+          <div className="login-brand-mark" aria-hidden="true">
+            UFA
+          </div>
 
-        <form onSubmit={handleSubmit}>
-          <label htmlFor="staffId">
-            Staff ID
-          </label>
+          <p className="login-brand-kicker">SECURE SCHOOL ATTENDANCE</p>
 
-          <input
-            id="staffId"
-            type="text"
-            value={staffId}
-            onChange={(event) =>
-              setStaffId(
-                event.target.value,
-              )
-            }
-            autoComplete="username"
-            required
-          />
+          <h1>ULTRA FINGERPRINT ATTENDANCE</h1>
 
-          <label htmlFor="password">
-            Password
-          </label>
+          <p className="login-brand-description">
+            Secure attendance, biometric identity and school management in one
+            trusted platform.
+          </p>
 
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(event) =>
-              setPassword(
-                event.target.value,
-              )
-            }
-            autoComplete="current-password"
-            required
-          />
+          <div className="login-security-list">
+            <div>
+              <span>✓</span>
+              <p>Secure school access</p>
+            </div>
 
-          {error && (
-            <p className="login-error">
-              {error}
-            </p>
-          )}
+            <div>
+              <span>✓</span>
+              <p>Role-based permissions</p>
+            </div>
 
-          <button type="submit">
-            Login
+            <div>
+              <span>✓</span>
+              <p>Protected attendance records</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="login-form-panel">
+          <button
+            className="login-back-button"
+            type="button"
+            onClick={returnHome}
+          >
+            ← Back to Home
           </button>
-        </form>
+
+          <div className="login-heading">
+            <p className="login-eyebrow">SCHOOL PORTAL</p>
+            <h2>School Login</h2>
+            <p>
+              Sign in with your authorized Staff ID and password.
+            </p>
+          </div>
+
+          <form className="login-form" onSubmit={handleSubmit}>
+            <div className="login-field">
+              <label htmlFor="staff-id">Staff ID</label>
+
+              <input
+                id="staff-id"
+                name="staffId"
+                type="text"
+                value={staffId}
+                onChange={(event) => setStaffId(event.target.value)}
+                placeholder="Enter your Staff ID"
+                autoComplete="username"
+                disabled={loading}
+              />
+            </div>
+
+            <div className="login-field">
+              <label htmlFor="password">Password</label>
+
+              <div className="login-password-wrapper">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
+                  disabled={loading}
+                />
+
+                <button
+                  className="login-password-toggle"
+                  type="button"
+                  onClick={() => setShowPassword((current) => !current)}
+                  aria-label={
+                    showPassword ? "Hide password" : "Show password"
+                  }
+                  disabled={loading}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="login-error" role="alert">
+                <strong>Login failed</strong>
+                <span>{error}</span>
+              </div>
+            )}
+
+            <button
+              className="login-submit-button"
+              type="submit"
+              disabled={loading}
+            >
+              {loading ? "Signing in..." : "Sign In"}
+            </button>
+          </form>
+
+          <div className="login-footer">
+            <span>ULTRA FINGERPRINT ATTENDANCE</span>
+            <span>Secure School Platform</span>
+          </div>
+        </div>
       </section>
     </main>
   );
