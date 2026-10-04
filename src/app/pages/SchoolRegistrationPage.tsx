@@ -3,11 +3,26 @@ import {
   useState,
 } from "react";
 import "./SchoolRegistrationPage.css";
+import type { School } from "../../../domain/entities/school";
+import type { User } from "../../../domain/entities/user";
+import {
+  getSchools,
+  saveSchool,
+} from "../../../data/repositories/schoolRepository";
+import {
+  getUsers,
+  saveUser,
+} from "../../../data/repositories/userRepository";
+import {
+  createPasswordCredential,
+  savePasswordCredential,
+} from "../../../data/repositories/passwordCredentialRepository";
 
-type ApplicationStatus = "PENDING_REVIEW";
+type ApplicationStatus = "ACTIVE_TRIAL";
 
 interface SchoolApplication {
   applicationId: string;
+  schoolId: string;
   schoolName: string;
   schoolType: string;
   address: string;
@@ -15,6 +30,7 @@ interface SchoolApplication {
   lga: string;
   administratorName: string;
   administratorPosition: string;
+  staffId: string;
   phone: string;
   email: string;
   studentCount: string;
@@ -22,16 +38,44 @@ interface SchoolApplication {
   requestedPlan: string;
   status: ApplicationStatus;
   submittedAt: string;
+  trialStartedAt: string;
+  trialEndsAt: string;
 }
+
+const TRIAL_DURATION_DAYS = 7;
+const APPLICATIONS_KEY = "ultra-school-applications";
+const TRIALS_KEY = "ultra-school-trials";
 
 function createApplicationId() {
   const timestamp = Date.now().toString(36).toUpperCase();
-  const random = Math.random()
-    .toString(36)
-    .slice(2, 7)
+
+  const random = crypto.randomUUID()
+    .replace(/-/g, "")
+    .slice(0, 8)
     .toUpperCase();
 
   return `UFA-${timestamp}-${random}`;
+}
+
+function createSchoolId() {
+  return `school-${crypto.randomUUID()}`;
+}
+
+function createUserId() {
+  return `user-${crypto.randomUUID()}`;
+}
+
+function createTrialEndDate(startedAt: string) {
+  const end = new Date(startedAt);
+  end.setDate(
+    end.getDate() + TRIAL_DURATION_DAYS,
+  );
+
+  return end.toISOString();
+}
+
+function normalize(value: string) {
+  return value.trim().toLowerCase();
 }
 
 export default function SchoolRegistrationPage() {
@@ -40,7 +84,7 @@ export default function SchoolRegistrationPage() {
 
   const [error, setError] = useState("");
 
-  function handleSubmit(
+  async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
@@ -48,80 +92,290 @@ export default function SchoolRegistrationPage() {
 
     const form = new FormData(event.currentTarget);
 
-    const application: SchoolApplication = {
-      applicationId: createApplicationId(),
-      schoolName: String(form.get("schoolName") ?? "").trim(),
-      schoolType: String(form.get("schoolType") ?? ""),
-      address: String(form.get("address") ?? "").trim(),
-      state: String(form.get("state") ?? "").trim(),
-      lga: String(form.get("lga") ?? "").trim(),
-      administratorName: String(
-        form.get("administratorName") ?? "",
-      ).trim(),
-      administratorPosition: String(
-        form.get("administratorPosition") ?? "",
-      ).trim(),
-      phone: String(form.get("phone") ?? "").trim(),
-      email: String(form.get("email") ?? "").trim(),
-      studentCount: String(
-        form.get("studentCount") ?? "",
-      ).trim(),
-      staffCount: String(
-        form.get("staffCount") ?? "",
-      ).trim(),
-      requestedPlan: String(
-        form.get("requestedPlan") ?? "",
-      ),
-      status: "PENDING_REVIEW",
-      submittedAt: new Date().toISOString(),
-    };
+    const schoolName =
+      String(form.get("schoolName") ?? "").trim();
 
-    if (!application.schoolName) {
+    const schoolType =
+      String(form.get("schoolType") ?? "");
+
+    const address =
+      String(form.get("address") ?? "").trim();
+
+    const state =
+      String(form.get("state") ?? "").trim();
+
+    const lga =
+      String(form.get("lga") ?? "").trim();
+
+    const administratorName =
+      String(
+        form.get("administratorName") ?? "",
+      ).trim();
+
+    const administratorPosition =
+      String(
+        form.get("administratorPosition") ?? "",
+      );
+
+    const staffId =
+      String(
+        form.get("staffId") ?? "",
+      ).trim();
+
+    const phone =
+      String(form.get("phone") ?? "").trim();
+
+    const email =
+      String(form.get("email") ?? "").trim();
+
+    const password =
+      String(
+        form.get("password") ?? "",
+      );
+
+    const confirmPassword =
+      String(
+        form.get("confirmPassword") ?? "",
+      );
+
+    const studentCount =
+      String(
+        form.get("studentCount") ?? "",
+      ).trim();
+
+    const staffCount =
+      String(
+        form.get("staffCount") ?? "",
+      ).trim();
+
+    const requestedPlan =
+      String(
+        form.get("requestedPlan") ?? "",
+      );
+
+    if (!schoolName) {
       setError("Please enter the school name.");
       return;
     }
 
-    if (!application.email) {
-      setError("Please enter a valid school email.");
+    if (!administratorName) {
+      setError(
+        "Please enter the Principal/Admin name.",
+      );
       return;
     }
 
-    if (!application.phone) {
-      setError("Please enter the school contact phone.");
+    if (!staffId) {
+      setError(
+        "Please enter a Principal/Admin ID.",
+      );
       return;
     }
 
-    const existingApplications =
-      JSON.parse(
-        localStorage.getItem(
-          "ultra-school-applications",
-        ) ?? "[]",
-      ) as SchoolApplication[];
+    if (!email) {
+      setError(
+        "Please enter a valid email address.",
+      );
+      return;
+    }
 
-    localStorage.setItem(
-      "ultra-school-applications",
-      JSON.stringify([
-        ...existingApplications,
+    if (!phone) {
+      setError(
+        "Please enter the contact phone number.",
+      );
+      return;
+    }
+
+    if (password.length < 8) {
+      setError(
+        "Password must contain at least 8 characters.",
+      );
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError(
+        "Passwords do not match.",
+      );
+      return;
+    }
+
+    try {
+      const users = await getUsers();
+
+      const duplicateStaffId = users.some(
+        (user) =>
+          user.staffId &&
+          normalize(user.staffId) ===
+            normalize(staffId),
+      );
+
+      if (duplicateStaffId) {
+        setError(
+          "This Principal/Admin ID is already registered.",
+        );
+        return;
+      }
+
+      const existingApplications =
+        JSON.parse(
+          localStorage.getItem(
+            APPLICATIONS_KEY,
+          ) ?? "[]",
+        ) as SchoolApplication[];
+
+      const duplicateEmail =
+        existingApplications.some(
+          (application) =>
+            normalize(application.email) ===
+            normalize(email),
+        );
+
+      if (duplicateEmail) {
+        setError(
+          "This email address is already registered.",
+        );
+        return;
+      }
+
+      const now =
+        new Date().toISOString();
+
+      const schoolId =
+        createSchoolId();
+
+      const userId =
+        createUserId();
+
+      const trialEndsAt =
+        createTrialEndDate(now);
+
+      const school: School = {
+        schoolId,
+        name: schoolName,
+        status: "active",
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      const user: User = {
+        userId,
+        schoolId,
+        role: "Principal",
+        name: administratorName,
+        staffId,
+        status: "active",
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      await saveSchool(school);
+      await saveUser(user);
+
+      const credential =
+        await createPasswordCredential(
+          userId,
+          password,
+        );
+
+      await savePasswordCredential(
+        credential,
+      );
+
+      const application: SchoolApplication = {
+        applicationId:
+          createApplicationId(),
+        schoolId,
+        schoolName,
+        schoolType,
+        address,
+        state,
+        lga,
+        administratorName,
+        administratorPosition,
+        staffId,
+        phone,
+        email,
+        studentCount,
+        staffCount,
+        requestedPlan,
+        status: "ACTIVE_TRIAL",
+        submittedAt: now,
+        trialStartedAt: now,
+        trialEndsAt,
+      };
+
+      localStorage.setItem(
+        APPLICATIONS_KEY,
+        JSON.stringify([
+          ...existingApplications,
+          application,
+        ]),
+      );
+
+      const existingTrials =
+        JSON.parse(
+          localStorage.getItem(
+            TRIALS_KEY,
+          ) ?? "[]",
+        ) as Array<{
+          schoolId: string;
+          userId: string;
+          email: string;
+          trialStartedAt: string;
+          trialEndsAt: string;
+          status: "ACTIVE";
+        }>;
+
+      localStorage.setItem(
+        TRIALS_KEY,
+        JSON.stringify([
+          ...existingTrials,
+          {
+            schoolId,
+            userId,
+            email,
+            trialStartedAt: now,
+            trialEndsAt,
+            status: "ACTIVE",
+          },
+        ]),
+      );
+
+      setSubmittedApplication(
         application,
-      ]),
-    );
+      );
 
-    setSubmittedApplication(application);
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    } catch {
+      setError(
+        "Unable to complete school registration. Please try again.",
+      );
+    }
   }
 
   function goHome() {
-    window.history.pushState({}, "", "/");
+    window.history.pushState(
+      {},
+      "",
+      "/",
+    );
+
     window.dispatchEvent(
       new PopStateEvent("popstate"),
     );
   }
 
   function goLogin() {
-    window.history.pushState({}, "", "/login");
+    window.history.pushState(
+      {},
+      "",
+      "/login",
+    );
+
     window.dispatchEvent(
       new PopStateEvent("popstate"),
     );
@@ -136,17 +390,17 @@ export default function SchoolRegistrationPage() {
           </div>
 
           <p className="registration-kicker">
-            APPLICATION SUBMITTED
+            SCHOOL ACTIVATED
           </p>
 
           <h1>
-            Your school registration is now under review.
+            Your school is now active.
           </h1>
 
           <p className="registration-success-text">
-            Keep your application reference number. You
-            will need it to track the progress of your
-            application.
+            Your Principal/Admin account has
+            been created successfully. Your
+            7-day free trial has started.
           </p>
 
           <div className="application-reference">
@@ -157,25 +411,43 @@ export default function SchoolRegistrationPage() {
           </div>
 
           <div className="application-status">
-            <span>Status</span>
-            <strong>Pending Review</strong>
+            <span>School Status</span>
+            <strong>
+              Active — Free Trial
+            </strong>
+          </div>
+
+          <div className="application-status">
+            <span>Trial Ends</span>
+            <strong>
+              {new Date(
+                submittedApplication.trialEndsAt,
+              ).toLocaleString()}
+            </strong>
+          </div>
+
+          <div className="application-status">
+            <span>Principal/Admin ID</span>
+            <strong>
+              {submittedApplication.staffId}
+            </strong>
           </div>
 
           <div className="registration-actions">
             <button
               type="button"
               className="registration-primary"
-              onClick={goHome}
+              onClick={goLogin}
             >
-              Back to Website
+              Go to School Login
             </button>
 
             <button
               type="button"
               className="registration-secondary"
-              onClick={goLogin}
+              onClick={goHome}
             >
-              School Login
+              Back to Website
             </button>
           </div>
         </section>
@@ -196,8 +468,12 @@ export default function SchoolRegistrationPage() {
           </span>
 
           <span>
-            <strong>ULTRA FINGERPRINT</strong>
-            <small>ATTENDANCE</small>
+            <strong>
+              ULTRA FINGERPRINT
+            </strong>
+            <small>
+              ATTENDANCE
+            </small>
           </span>
         </button>
 
@@ -216,11 +492,14 @@ export default function SchoolRegistrationPage() {
             SCHOOL REGISTRATION
           </p>
 
-          <h1>Register your school</h1>
+          <h1>
+            Register your school
+          </h1>
 
           <p>
-            Submit your school's application to join ULTRA
-            FINGERPRINT ATTENDANCE.
+            Create your school and
+            Principal/Admin account and
+            start your 7-day free trial.
           </p>
         </div>
 
@@ -232,8 +511,12 @@ export default function SchoolRegistrationPage() {
             <div className="section-title">
               <span>01</span>
               <div>
-                <h2>School Information</h2>
-                <p>Tell us about your school.</p>
+                <h2>
+                  School Information
+                </h2>
+                <p>
+                  Tell us about your school.
+                </p>
               </div>
             </div>
 
@@ -242,6 +525,7 @@ export default function SchoolRegistrationPage() {
                 <label htmlFor="schoolName">
                   School Name
                 </label>
+
                 <input
                   id="schoolName"
                   name="schoolName"
@@ -262,26 +546,36 @@ export default function SchoolRegistrationPage() {
                   required
                   defaultValue=""
                 >
-                  <option value="" disabled>
+                  <option
+                    value=""
+                    disabled
+                  >
                     Select school type
                   </option>
+
                   <option value="Nursery">
                     Nursery
                   </option>
+
                   <option value="Primary">
                     Primary
                   </option>
+
                   <option value="Secondary">
                     Secondary
                   </option>
+
                   <option value="Nursery-Primary">
                     Nursery & Primary
                   </option>
+
                   <option value="Primary-Secondary">
                     Primary & Secondary
                   </option>
+
                   <option value="Nursery-Primary-Secondary">
-                    Nursery, Primary & Secondary
+                    Nursery, Primary &
+                    Secondary
                   </option>
                 </select>
               </div>
@@ -290,6 +584,7 @@ export default function SchoolRegistrationPage() {
                 <label htmlFor="studentCount">
                   Estimated Students
                 </label>
+
                 <input
                   id="studentCount"
                   name="studentCount"
@@ -304,6 +599,7 @@ export default function SchoolRegistrationPage() {
                 <label htmlFor="staffCount">
                   Estimated Staff
                 </label>
+
                 <input
                   id="staffCount"
                   name="staffCount"
@@ -320,8 +616,13 @@ export default function SchoolRegistrationPage() {
             <div className="section-title">
               <span>02</span>
               <div>
-                <h2>School Location</h2>
-                <p>Provide the school's location.</p>
+                <h2>
+                  School Location
+                </h2>
+                <p>
+                  Provide the school's
+                  location.
+                </p>
               </div>
             </div>
 
@@ -330,6 +631,7 @@ export default function SchoolRegistrationPage() {
                 <label htmlFor="address">
                   School Address
                 </label>
+
                 <textarea
                   id="address"
                   name="address"
@@ -343,6 +645,7 @@ export default function SchoolRegistrationPage() {
                 <label htmlFor="state">
                   State
                 </label>
+
                 <input
                   id="state"
                   name="state"
@@ -356,6 +659,7 @@ export default function SchoolRegistrationPage() {
                 <label htmlFor="lga">
                   Local Government Area
                 </label>
+
                 <input
                   id="lga"
                   name="lga"
@@ -371,9 +675,14 @@ export default function SchoolRegistrationPage() {
             <div className="section-title">
               <span>03</span>
               <div>
-                <h2>Administrator</h2>
+                <h2>
+                  Principal / Admin
+                  Account
+                </h2>
+
                 <p>
-                  Provide the primary school contact.
+                  This account will manage
+                  the school.
                 </p>
               </div>
             </div>
@@ -383,11 +692,13 @@ export default function SchoolRegistrationPage() {
                 <label htmlFor="administratorName">
                   Full Name
                 </label>
+
                 <input
                   id="administratorName"
                   name="administratorName"
                   type="text"
                   placeholder="Principal / Administrator"
+                  autoComplete="name"
                   required
                 />
               </div>
@@ -396,27 +707,36 @@ export default function SchoolRegistrationPage() {
                 <label htmlFor="administratorPosition">
                   Position
                 </label>
+
                 <select
                   id="administratorPosition"
                   name="administratorPosition"
                   defaultValue=""
                   required
                 >
-                  <option value="" disabled>
+                  <option
+                    value=""
+                    disabled
+                  >
                     Select position
                   </option>
+
                   <option value="Principal">
                     Principal
                   </option>
+
                   <option value="Proprietor">
                     Proprietor
                   </option>
+
                   <option value="School Administrator">
                     School Administrator
                   </option>
+
                   <option value="Head Teacher">
                     Head Teacher
                   </option>
+
                   <option value="Director">
                     Director
                   </option>
@@ -424,9 +744,25 @@ export default function SchoolRegistrationPage() {
               </div>
 
               <div className="registration-field">
+                <label htmlFor="staffId">
+                  Principal/Admin ID
+                </label>
+
+                <input
+                  id="staffId"
+                  name="staffId"
+                  type="text"
+                  placeholder="Create your login ID"
+                  autoComplete="username"
+                  required
+                />
+              </div>
+
+              <div className="registration-field">
                 <label htmlFor="phone">
                   Phone Number
                 </label>
+
                 <input
                   id="phone"
                   name="phone"
@@ -441,12 +777,45 @@ export default function SchoolRegistrationPage() {
                 <label htmlFor="email">
                   Email Address
                 </label>
+
                 <input
                   id="email"
                   name="email"
                   type="email"
-                  placeholder="school@example.com"
+                  placeholder="admin@school.com"
                   autoComplete="email"
+                  required
+                />
+              </div>
+
+              <div className="registration-field">
+                <label htmlFor="password">
+                  Password
+                </label>
+
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="Minimum 8 characters"
+                  autoComplete="new-password"
+                  minLength={8}
+                  required
+                />
+              </div>
+
+              <div className="registration-field">
+                <label htmlFor="confirmPassword">
+                  Confirm Password
+                </label>
+
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  placeholder="Re-enter password"
+                  autoComplete="new-password"
+                  minLength={8}
                   required
                 />
               </div>
@@ -457,9 +826,14 @@ export default function SchoolRegistrationPage() {
             <div className="section-title">
               <span>04</span>
               <div>
-                <h2>Subscription</h2>
+                <h2>
+                  Subscription
+                </h2>
+
                 <p>
-                  Select the plan you want to request.
+                  Choose your plan. Your
+                  7-day free trial starts
+                  immediately.
                 </p>
               </div>
             </div>
@@ -472,9 +846,14 @@ export default function SchoolRegistrationPage() {
                   value="Starter"
                   required
                 />
-                <strong>Starter</strong>
+
+                <strong>
+                  Starter
+                </strong>
+
                 <span>
-                  Designed for smaller schools.
+                  Designed for smaller
+                  schools.
                 </span>
               </label>
 
@@ -484,9 +863,14 @@ export default function SchoolRegistrationPage() {
                   name="requestedPlan"
                   value="Professional"
                 />
-                <strong>Professional</strong>
+
+                <strong>
+                  Professional
+                </strong>
+
                 <span>
-                  More capacity for growing schools.
+                  More capacity for
+                  growing schools.
                 </span>
               </label>
 
@@ -496,9 +880,14 @@ export default function SchoolRegistrationPage() {
                   name="requestedPlan"
                   value="Enterprise"
                 />
-                <strong>Enterprise</strong>
+
+                <strong>
+                  Enterprise
+                </strong>
+
                 <span>
-                  Designed for larger school operations.
+                  Designed for larger
+                  school operations.
                 </span>
               </label>
             </div>
@@ -507,10 +896,16 @@ export default function SchoolRegistrationPage() {
           <section className="registration-section">
             <div className="section-title">
               <span>05</span>
+
               <div>
-                <h2>Confirmation</h2>
+                <h2>
+                  Confirmation
+                </h2>
+
                 <p>
-                  Review the information before submitting.
+                  Review the information
+                  before creating your
+                  school.
                 </p>
               </div>
             </div>
@@ -520,10 +915,14 @@ export default function SchoolRegistrationPage() {
                 type="checkbox"
                 required
               />
+
               <span>
-                I confirm that the information provided is
-                accurate and I agree to the platform's
-                registration and privacy requirements.
+                I confirm that the
+                information provided is
+                accurate and I agree to
+                the platform's
+                registration and privacy
+                requirements.
               </span>
             </label>
 
@@ -540,7 +939,8 @@ export default function SchoolRegistrationPage() {
               type="submit"
               className="registration-submit"
             >
-              Submit School Application
+              Create School & Start
+              Free Trial
             </button>
           </section>
         </form>
