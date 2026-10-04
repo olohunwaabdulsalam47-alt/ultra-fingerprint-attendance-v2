@@ -34,6 +34,7 @@ import ReportsPage from "./ReportsPage";
 import UsersPage from "./UsersPage";
 import BiometricPage from "./BiometricPage";
 import AuditLogsPage from "./AuditLogsPage";
+import SubscriptionPage from "./SubscriptionPage";
 
 import ProtectedPage from "../auth/ProtectedPage";
 import type { Permission } from "../auth/permissions";
@@ -50,183 +51,296 @@ interface RouteConfig {
 export default function AppPage({
   path,
 }: AppPageProps) {
-  const routes: Record<string, RouteConfig> = {
+  const routes: Record<
+    string,
+    RouteConfig
+  > = {
     "/": {
-      permission: "VIEW_DASHBOARD",
-      element: <DashboardPage />,
+      permission:
+        "VIEW_DASHBOARD",
+      element: (
+        <DashboardPage />
+      ),
     },
 
     "/principal-dashboard": {
-      permission: "MANAGE_SCHOOLS",
-      element: <PrincipalDashboardPage />,
+      permission:
+        "MANAGE_SCHOOLS",
+      element: (
+        <PrincipalDashboardPage />
+      ),
     },
 
     "/school-profile-settings": {
-      permission: "MANAGE_SCHOOLS",
-      element: <SchoolProfileSettingsPage />,
+      permission:
+        "MANAGE_SCHOOLS",
+      element: (
+        <SchoolProfileSettingsPage />
+      ),
     },
 
     "/class-academic-structure": {
-      permission: "MANAGE_CLASSES",
-      element: <ClassAcademicStructurePage />,
+      permission:
+        "MANAGE_CLASSES",
+      element: (
+        <ClassAcademicStructurePage />
+      ),
     },
 
     "/student-enrollment": {
-      permission: "MANAGE_STUDENTS",
-      element: <StudentEnrollmentPage />,
+      permission:
+        "MANAGE_STUDENTS",
+      element: (
+        <StudentEnrollmentPage />
+      ),
     },
 
     "/teacher-staff-management": {
-      permission: "MANAGE_USERS",
-      element: <TeacherStaffManagementPage />,
+      permission:
+        "MANAGE_USERS",
+      element: (
+        <TeacherStaffManagementPage />
+      ),
     },
 
     "/teacher-assignment": {
-      permission: "MANAGE_USERS",
-      element: <TeacherAssignmentPage />,
+      permission:
+        "MANAGE_USERS",
+      element: (
+        <TeacherAssignmentPage />
+      ),
     },
 
     "/subject-curriculum": {
-      permission: "MANAGE_SCHOOLS",
-      element: <SubjectCurriculumPage />,
+      permission:
+        "MANAGE_SCHOOLS",
+      element: (
+        <SubjectCurriculumPage />
+      ),
     },
 
     "/timetable-schedule": {
-      permission: "MANAGE_SCHOOLS",
-      element: <TimetableSchedulePage />,
+      permission:
+        "MANAGE_SCHOOLS",
+      element: (
+        <TimetableSchedulePage />
+      ),
     },
 
     "/examination-assessment": {
-      permission: "MANAGE_SCHOOLS",
-      element: <ExaminationAssessmentPage />,
+      permission:
+        "MANAGE_SCHOOLS",
+      element: (
+        <ExaminationAssessmentPage />
+      ),
     },
 
     "/results-score-management": {
-      permission: "MANAGE_SCHOOLS",
-      element: <ResultsScoreManagementPage />,
+      permission:
+        "MANAGE_SCHOOLS",
+      element: (
+        <ResultsScoreManagementPage />
+      ),
     },
 
     "/report-cards-results": {
-      permission: "VIEW_REPORTS",
-      element: <ReportCardsResultsPage />,
+      permission:
+        "VIEW_REPORTS",
+      element: (
+        <ReportCardsResultsPage />
+      ),
     },
 
     "/guardians": {
-      permission: "MANAGE_STUDENTS",
-      element: <GuardianManagementPage />,
+      permission:
+        "MANAGE_STUDENTS",
+      element: (
+        <GuardianManagementPage />
+      ),
     },
 
     "/schools": {
-      permission: "MANAGE_PLATFORM",
+      permission:
+        "MANAGE_PLATFORM",
       element: <SchoolsPage />,
     },
 
     "/school-applications": {
-      permission: "MANAGE_PLATFORM",
-      element: <SchoolApplicationsPage />,
+      permission:
+        "MANAGE_PLATFORM",
+      element: (
+        <SchoolApplicationsPage />
+      ),
     },
 
     "/superadmin-schools": {
-      permission: "MANAGE_PLATFORM",
-      element: <SuperAdminSchoolsPage />,
+      permission:
+        "MANAGE_PLATFORM",
+      element: (
+        <SuperAdminSchoolsPage />
+      ),
     },
 
     "/superadmin-subscriptions": {
-      permission: "MANAGE_PLATFORM",
-      element: <SuperAdminSubscriptionsPage />,
+      permission:
+        "MANAGE_PLATFORM",
+      element: (
+        <SuperAdminSubscriptionsPage />
+      ),
     },
 
     "/superadmin-payments": {
-      permission: "MANAGE_PLATFORM",
-      element: <SuperAdminPaymentsPage />,
+      permission:
+        "MANAGE_PLATFORM",
+      element: (
+        <SuperAdminPaymentsPage />
+      ),
     },
 
     "/superadmin-users": {
-      permission: "MANAGE_PLATFORM",
-      element: <SuperAdminUsersPage />,
+      permission:
+        "MANAGE_PLATFORM",
+      element: (
+        <SuperAdminUsersPage />
+      ),
     },
 
     "/superadmin-security": {
-      permission: "MANAGE_PLATFORM",
-      element: <SuperAdminSecurityPage />,
+      permission:
+        "MANAGE_PLATFORM",
+      element: (
+        <SuperAdminSecurityPage />
+      ),
     },
 
     "/superadmin-audit-compliance": {
-      permission: "MANAGE_PLATFORM",
-      element: <SuperAdminAuditCompliancePage />,
+      permission:
+        "MANAGE_PLATFORM",
+      element: (
+        <SuperAdminAuditCompliancePage />
+      ),
     },
 
     "/superadmin-support-incidents": {
-      permission: "MANAGE_PLATFORM",
-      element: <SuperAdminSupportIncidentPage />,
+      permission:
+        "MANAGE_PLATFORM",
+      element: (
+        <SuperAdminSupportIncidentPage />
+      ),
     },
 
     "/superadmin-communication": {
-      permission: "MANAGE_PLATFORM",
-      element: <SuperAdminCommunicationPage />,
+      permission:
+        "MANAGE_PLATFORM",
+      element: (
+        <SuperAdminCommunicationPage />
+      ),
     },
 
     "/superadmin-operations": {
-      permission: "MANAGE_PLATFORM",
-      element: <SuperAdminOperationsPage />,
+      permission:
+        "MANAGE_PLATFORM",
+      element: (
+        <SuperAdminOperationsPage />
+      ),
     },
 
     "/superadmin-data-privacy": {
-      permission: "MANAGE_PLATFORM",
-      element: <SuperAdminDataPrivacyPage />,
+      permission:
+        "MANAGE_PLATFORM",
+      element: (
+        <SuperAdminDataPrivacyPage />
+      ),
     },
 
     "/superadmin-analytics-tools": {
-      permission: "MANAGE_PLATFORM",
-      element: <SuperAdminAnalyticsToolsPage />,
+      permission:
+        "MANAGE_PLATFORM",
+      element: (
+        <SuperAdminAnalyticsToolsPage />
+      ),
     },
 
     "/superadmin-hardening": {
-      permission: "MANAGE_PLATFORM",
-      element: <SuperAdminHardeningPage />,
+      permission:
+        "MANAGE_PLATFORM",
+      element: (
+        <SuperAdminHardeningPage />
+      ),
     },
 
     "/classes": {
-      permission: "MANAGE_CLASSES",
+      permission:
+        "MANAGE_CLASSES",
       element: <ClassesPage />,
     },
 
     "/students": {
-      permission: "MANAGE_STUDENTS",
+      permission:
+        "MANAGE_STUDENTS",
       element: <StudentsPage />,
     },
 
     "/attendance": {
-      permission: "RECORD_ATTENDANCE",
-      element: <AttendancePage />,
+      permission:
+        "RECORD_ATTENDANCE",
+      element: (
+        <AttendancePage />
+      ),
     },
 
     "/reports": {
-      permission: "VIEW_REPORTS",
+      permission:
+        "VIEW_REPORTS",
       element: <ReportsPage />,
     },
 
     "/users": {
-      permission: "MANAGE_USERS",
+      permission:
+        "MANAGE_USERS",
       element: <UsersPage />,
     },
 
     "/biometric": {
-      permission: "MANAGE_BIOMETRIC",
+      permission:
+        "MANAGE_BIOMETRIC",
       element: <BiometricPage />,
     },
 
     "/audit-logs": {
-      permission: "VIEW_AUDIT_LOGS",
-      element: <AuditLogsPage />,
+      permission:
+        "VIEW_AUDIT_LOGS",
+      element: (
+        <AuditLogsPage />
+      ),
     },
   };
 
-  const route = routes[path] ?? routes["/"];
+  const route =
+    routes[path] ?? routes["/"];
+
+  /*
+   * Subscription is deliberately
+   * handled outside ProtectedPage.
+   *
+   * An expired school has no valid
+   * authenticated session, so it must
+   * still be able to reach the
+   * subscription screen.
+   */
+  if (
+    path === "/subscription"
+  ) {
+    return (
+      <SubscriptionPage />
+    );
+  }
 
   return (
     <ProtectedPage
-      permission={route.permission}
+      permission={
+        route.permission
+      }
     >
       {route.element}
     </ProtectedPage>
