@@ -1,63 +1,68 @@
-import React, {
-  useEffect,
-  useState,
-} from "react";
-
+import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
-
 import LoginPage from "./app/pages/LoginPage";
 import HomePage from "./app/pages/HomePage";
 import SchoolRegistrationPage from "./app/pages/SchoolRegistrationPage";
 import ApplicationTrackingPage from "./app/pages/ApplicationTrackingPage";
-
 import { startOfflineSync } from "./app/offline/offlineSyncService";
+import { ensureDemoAccount } from "./app/auth/demoAccountSeeder";
 
 startOfflineSync();
 
 function AppEntry() {
-  const [path, setPath] =
-    useState(window.location.pathname);
+  const [path, setPath] = useState(window.location.pathname);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
+
+    ensureDemoAccount().finally(() => {
+      if (mounted) {
+        setInitialized(true);
+      }
+    });
+
     const handleNavigation = () => {
       setPath(window.location.pathname);
     };
 
-    window.addEventListener(
-      "popstate",
-      handleNavigation,
-    );
+    window.addEventListener("popstate", handleNavigation);
 
     return () => {
-      window.removeEventListener(
-        "popstate",
-        handleNavigation,
-      );
+      mounted = false;
+      window.removeEventListener("popstate", handleNavigation);
     };
   }, []);
 
-  if (path === "/login") {
-    return <LoginPage />;
+  if (!initialized) {
+    return (
+      <main
+        style={{
+          minHeight: "100vh",
+          display: "grid",
+          placeItems: "center",
+          padding: "24px",
+          textAlign: "center",
+          fontFamily: "Arial, sans-serif",
+        }}
+      >
+        <div>
+          <h1>ULTRA FINGERPRINT ATTENDANCE</h1>
+          <p>Initializing secure school platform...</p>
+        </div>
+      </main>
+    );
   }
 
-  if (path === "/register-school") {
-    return <SchoolRegistrationPage />;
-  }
-
-  if (path === "/track-application") {
-    return <ApplicationTrackingPage />;
-  }
-
-  if (path === "/") {
-    return <HomePage />;
-  }
+  if (path === "/login") return <LoginPage />;
+  if (path === "/register-school") return <SchoolRegistrationPage />;
+  if (path === "/track-application") return <ApplicationTrackingPage />;
+  if (path === "/") return <HomePage />;
 
   return <HomePage />;
 }
 
-ReactDOM.createRoot(
-  document.getElementById("root")!,
-).render(
+ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <AppEntry />
   </React.StrictMode>,
