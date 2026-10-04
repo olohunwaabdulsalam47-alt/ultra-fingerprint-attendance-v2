@@ -7,8 +7,11 @@ import type {
   NotificationEvent,
 } from "../../../domain/entities/notificationEvent";
 import {
-  getGuardiansByStudent,
+  getGuardiansByStudentAndSchool,
 } from "../../../data/repositories/guardianRepository";
+import {
+  getStudentByIdForSchool,
+} from "../../../data/repositories/studentRepository";
 import {
   saveNotificationEvent,
 } from "../../../data/repositories/notificationEventRepository";
@@ -84,14 +87,59 @@ export async function createAttendanceNotificationEvents(
   studentName: string,
   status: AttendanceStatus,
 ): Promise<NotificationEvent[]> {
-  const guardians = await getGuardiansByStudent(studentId);
+  const selectedSchoolId = schoolId.trim();
+  const selectedStudentId = studentId.trim();
+
+  if (!selectedSchoolId) {
+    throw new Error(
+      "School ID is required for notification creation.",
+    );
+  }
+
+  if (!selectedStudentId) {
+    throw new Error(
+      "Student ID is required for notification creation.",
+    );
+  }
+
+  const student =
+    await getStudentByIdForSchool(
+      selectedStudentId,
+      selectedSchoolId,
+    );
+
+  if (!student) {
+    throw new Error(
+      "Student does not belong to the supplied school.",
+    );
+  }
+
+  const verifiedStudentName =
+    student.name.trim() || studentName.trim();
+
+  if (!verifiedStudentName) {
+    throw new Error(
+      "Student name is required for notification creation.",
+    );
+  }
+
+  const guardians =
+    await getGuardiansByStudentAndSchool(
+      selectedStudentId,
+      selectedSchoolId,
+    );
 
   const eligibleGuardians = guardians.filter(
     shouldNotifyGuardian,
   );
 
-  const notificationType = getNotificationType(status);
-  const message = getMessage(studentName, status);
+  const notificationType =
+    getNotificationType(status);
+
+  const message = getMessage(
+    verifiedStudentName,
+    status,
+  );
 
   const events: NotificationEvent[] = [];
 
@@ -109,8 +157,8 @@ export async function createAttendanceNotificationEvents(
 
     const event: NotificationEvent = {
       notificationId: createNotificationId(),
-      schoolId,
-      studentId,
+      schoolId: selectedSchoolId,
+      studentId: selectedStudentId,
       guardianId: guardian.guardianId,
       channel,
       type: notificationType,
