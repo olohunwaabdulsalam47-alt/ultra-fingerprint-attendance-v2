@@ -6,7 +6,7 @@ import {
 } from "../../../domain/enums/attendanceStatus";
 import { isValidAttendance } from "../../../domain/validation/entityValidation";
 import {
-  getAttendance,
+  getAttendanceBySchool,
   saveAttendance,
 } from "../../../data/repositories/attendanceRepository";
 import {
@@ -52,17 +52,17 @@ export default function AttendancePage() {
         return;
       }
 
-      const savedRecords = await getAttendance();
-
-      const schoolRecords = savedRecords.filter(
-        (record) =>
-          record.schoolId === session.schoolId,
-      );
+      const schoolRecords =
+        await getAttendanceBySchool(
+          session.schoolId,
+        );
 
       setRecords(schoolRecords);
       setError("");
     } catch {
-      setError("Unable to load attendance records.");
+      setError(
+        "Unable to load attendance records.",
+      );
     }
   }
 
@@ -139,14 +139,18 @@ export default function AttendancePage() {
         return;
       }
 
-      const now = new Date().toISOString();
+      const now =
+        new Date().toISOString();
 
       const attendance: Attendance = {
         attendanceId: crypto.randomUUID(),
         schoolId,
         classId: selectedClassId,
         studentId: selectedStudentId,
-        date: new Date().toISOString().slice(0, 10),
+        date:
+          new Date()
+            .toISOString()
+            .slice(0, 10),
         status,
         createdAt: now,
         updatedAt: now,
@@ -154,11 +158,12 @@ export default function AttendancePage() {
       };
 
       if (!isValidAttendance(attendance)) {
-        setError("Invalid attendance data.");
+        setError(
+          "Invalid attendance data.",
+        );
         return;
       }
 
-      // Attendance is saved first and remains authoritative.
       await saveAttendance(attendance);
 
       let notificationCount = 0;
@@ -172,10 +177,12 @@ export default function AttendancePage() {
             attendance.status,
           );
 
-        notificationCount = notificationEvents.length;
+        notificationCount =
+          notificationEvents.length;
       } catch {
-        // Notification failure must not invalidate
-        // a successfully recorded attendance record.
+        // Attendance remains authoritative.
+        // Notification creation must not
+        // invalidate a successful attendance record.
       }
 
       await recordAuditEvent(
@@ -186,7 +193,9 @@ export default function AttendancePage() {
 
       setClassId("");
       setStudentId("");
-      setStatus(ATTENDANCE_STATUSES.PRESENT);
+      setStatus(
+        ATTENDANCE_STATUSES.PRESENT,
+      );
 
       if (notificationCount > 0) {
         setNotificationMessage(
@@ -200,7 +209,9 @@ export default function AttendancePage() {
 
       await loadAttendance();
     } catch {
-      setError("Unable to save attendance.");
+      setError(
+        "Unable to save attendance.",
+      );
     }
   }
 
@@ -255,7 +266,9 @@ export default function AttendancePage() {
               )
             }
           >
-            {Object.values(ATTENDANCE_STATUSES).map(
+            {Object.values(
+              ATTENDANCE_STATUSES,
+            ).map(
               (attendanceStatus) => (
                 <option
                   key={attendanceStatus}
@@ -273,7 +286,11 @@ export default function AttendancePage() {
         </button>
       </form>
 
-      {error && <p role="alert">{error}</p>}
+      {error && (
+        <p role="alert">
+          {error}
+        </p>
+      )}
 
       {notificationMessage && (
         <p role="status">
@@ -284,16 +301,22 @@ export default function AttendancePage() {
       <h3>Attendance Records</h3>
 
       {records.length === 0 ? (
-        <p>No attendance records have been added yet.</p>
+        <p>
+          No attendance records have been added yet.
+        </p>
       ) : (
         <ul>
-          {records.map((record) => (
-            <li key={record.attendanceId}>
-              {record.date} — Student:{" "}
-              {record.studentId} —{" "}
-              {record.status}
-            </li>
-          ))}
+          {records.map(
+            (record) => (
+              <li
+                key={record.attendanceId}
+              >
+                {record.date} — Student:{" "}
+                {record.studentId} —{" "}
+                {record.status}
+              </li>
+            ),
+          )}
         </ul>
       )}
     </section>
