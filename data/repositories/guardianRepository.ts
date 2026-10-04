@@ -14,9 +14,14 @@ export async function saveGuardian(
       "readwrite",
     );
 
-    const store = transaction.objectStore(STORE_NAME);
+    const store = transaction.objectStore(
+      STORE_NAME,
+    );
 
-    store.put(guardian, guardian.guardianId);
+    store.put(
+      guardian,
+      guardian.guardianId,
+    );
 
     transaction.oncomplete = () => resolve();
 
@@ -43,12 +48,16 @@ export async function getGuardians(): Promise<Guardian[]> {
         "readonly",
       );
 
-      const store = transaction.objectStore(STORE_NAME);
+      const store = transaction.objectStore(
+        STORE_NAME,
+      );
 
       const request = store.getAll();
 
       request.onsuccess = () =>
-        resolve(request.result as Guardian[]);
+        resolve(
+          request.result as Guardian[],
+        );
 
       request.onerror = () =>
         reject(request.error);
@@ -72,6 +81,20 @@ export async function getGuardiansByStudent(
   );
 }
 
+export async function getGuardiansByStudentAndSchool(
+  studentId: string,
+  schoolId: string,
+): Promise<Guardian[]> {
+  const guardians = await getGuardians();
+
+  return guardians.filter(
+    (guardian) =>
+      guardian.studentId === studentId &&
+      guardian.schoolId === schoolId &&
+      guardian.status === "active",
+  );
+}
+
 export async function getGuardiansBySchool(
   schoolId: string,
 ): Promise<Guardian[]> {
@@ -81,4 +104,57 @@ export async function getGuardiansBySchool(
     (guardian) =>
       guardian.schoolId === schoolId,
   );
+}
+
+export async function getGuardianById(
+  guardianId: string,
+): Promise<Guardian | null> {
+  const db = await openDatabase();
+
+  const guardian =
+    await new Promise<Guardian | null>(
+      (resolve, reject) => {
+        const transaction = db.transaction(
+          STORE_NAME,
+          "readonly",
+        );
+
+        const store =
+          transaction.objectStore(STORE_NAME);
+
+        const request = store.get(guardianId);
+
+        request.onsuccess = () =>
+          resolve(
+            (request.result as
+              | Guardian
+              | undefined) ?? null,
+          );
+
+        request.onerror = () =>
+          reject(request.error);
+      },
+    );
+
+  db.close();
+
+  return guardian;
+}
+
+export async function getGuardianByIdForSchool(
+  guardianId: string,
+  schoolId: string,
+): Promise<Guardian | null> {
+  const guardian =
+    await getGuardianById(guardianId);
+
+  if (!guardian) {
+    return null;
+  }
+
+  if (guardian.schoolId !== schoolId) {
+    return null;
+  }
+
+  return guardian;
 }
