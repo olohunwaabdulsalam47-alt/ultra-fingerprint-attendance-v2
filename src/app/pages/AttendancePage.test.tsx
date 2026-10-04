@@ -52,6 +52,7 @@ describe("attendance audit integration", () => {
   it("stores attendance with the authenticated user ID", async () => {
     saveAuthSession({
       userId: "teacher-1",
+      schoolId: "school-1",
       staffId: "STAFF001",
       name: "Test Teacher",
       role: "Teacher",
