@@ -16,8 +16,16 @@ import {
 import {
   saveSchool,
 } from "../../../data/repositories/schoolRepository";
+import {
+  registerFirebaseUser,
+  refreshFirebaseUser,
+  resendVerificationEmail,
+  logoutFirebaseUser,
+} from "../firebase/firebaseAuthService";
 
-type ApplicationStatus = "ACTIVE_TRIAL";
+type ApplicationStatus =
+  | "PENDING_EMAIL_VERIFICATION"
+  | "ACTIVE_TRIAL";
 
 interface SchoolApplication {
   applicationId: string;
@@ -39,13 +47,27 @@ interface SchoolApplication {
   submittedAt: string;
   trialStartedAt: string;
   trialEndsAt: string;
+  firebaseUid?: string;
+}
+
+interface PendingRegistration {
+  application: SchoolApplication;
+  user: User;
+  school: School;
+  password: string;
+  firebaseUid: string;
 }
 
 const TRIAL_DURATION_DAYS = 7;
+
 const APPLICATIONS_KEY =
   "ultra-school-applications";
+
 const TRIALS_KEY =
   "ultra-school-trials";
+
+const PENDING_REGISTRATION_KEY =
+  "ultra-school-pending-registration";
 
 function createApplicationId(): string {
   const timestamp =
@@ -93,6 +115,46 @@ function normalize(
     .toLowerCase();
 }
 
+function savePendingRegistration(
+  pending: PendingRegistration,
+): void {
+  localStorage.setItem(
+    PENDING_REGISTRATION_KEY,
+    JSON.stringify(pending),
+  );
+}
+
+function getPendingRegistration():
+  | PendingRegistration
+  | null {
+  try {
+    const value =
+      localStorage.getItem(
+        PENDING_REGISTRATION_KEY,
+      );
+
+    if (!value) {
+      return null;
+    }
+
+    return JSON.parse(
+      value,
+    ) as PendingRegistration;
+  } catch {
+    localStorage.removeItem(
+      PENDING_REGISTRATION_KEY,
+    );
+
+    return null;
+  }
+}
+
+function clearPendingRegistration(): void {
+  localStorage.removeItem(
+    PENDING_REGISTRATION_KEY,
+  );
+}
+
 export default function SchoolRegistrationPage() {
   const [
     submittedApplication,
@@ -102,17 +164,27 @@ export default function SchoolRegistrationPage() {
       null,
     );
 
+  const [
+    verificationPending,
+    setVerificationPending,
+  ] = useState(false);
+
+  const [
+    verifyingEmail,
+    setVerifyingEmail,
+  ] = useState(false);
+
+  const [
+    resendingVerification,
+    setResendingVerification,
+  ] = useState(false);
+
   const [error, setError] =
     useState("");
 
-  /*
-   * Credential fields are controlled
-   * directly by React.
-   *
-   * This prevents browser autofill from
-   * accidentally mixing the Staff ID and
-   * password values.
-   */
+  const [verificationMessage, setVerificationMessage] =
+    useState("");
+
   const [staffId, setStaffId] =
     useState("");
 
@@ -124,12 +196,224 @@ export default function SchoolRegistrationPage() {
     setConfirmPassword,
   ] = useState("");
 
+  async function activateVerifiedRegistration(
+    pending: PendingRegistration,
+  ): Promise<void> {
+    const currentUser =
+      await refreshFirebaseUser();
+
+    if (!currentUser) {
+      throw new Error(
+        "Your Firebase session could not be found. Please sign in again.",
+      );
+    }
+
+    if (!currentUser.emailVerified) {
+      throw new Error(
+        "Your email has not been verified yet. Please verify it first.",
+      );
+    }
+
+    if (
+      currentUser.uid !==
+      pending.firebaseUid
+    ) {
+      throw new Error(
+        "The verified Firebase account does not match this registration.",
+      );
+    }
+
+    const now =
+      new Date().toISOString();
+
+    const trialEndsAt =
+      createTrialEndDate(
+        now,
+      );
+
+    const activatedApplication: SchoolApplication =
+      {
+        ...pending.application,
+        status:
+          "ACTIVE_TRIAL",
+        submittedAt:
+          pending.application
+            .submittedAt,
+        trialStartedAt: now,
+        trialEndsAt,
+        firebaseUid:
+          pending.firebaseUid,
+      };
+
+    const activatedSchool: School =
+      {
+        ...pending.school,
+        status: "active",
+        updatedAt: now,
+      };
+
+    const activatedUser: User =
+      {
+        ...pending.user,
+        status: "active",
+        updatedAt: now,
+      };
+
+    await saveSchool(
+      activatedSchool,
+    );
+
+    await saveUser(
+      activatedUser,
+    );
+
+    const credential =
+      await createPasswordCredential(
+        activatedUser.userId,
+        pending.password,
+      );
+
+    await savePasswordCredential(
+      credential,
+    );
+
+    const existingApplications =
+      JSON.parse(
+        localStorage.getItem(
+          APPLICATIONS_KEY,
+        ) ?? "[]",
+      ) as SchoolApplication[];
+
+    const updatedApplications =
+      existingApplications.filter(
+        (application) =>
+          application.applicationId !==
+          activatedApplication.applicationId,
+      );
+
+    localStorage.setItem(
+      APPLICATIONS_KEY,
+      JSON.stringify([
+        ...updatedApplications,
+        activatedApplication,
+      ]),
+    );
+
+    const existingTrials =
+      JSON.parse(
+        localStorage.getItem(
+          TRIALS_KEY,
+        ) ?? "[]",
+      ) as Array<{
+        schoolId: string;
+        userId: string;
+        email: string;
+        trialStartedAt: string;
+        trialEndsAt: string;
+        status:
+          | "ACTIVE"
+          | "EXPIRED";
+      }>;
+
+    localStorage.setItem(
+      TRIALS_KEY,
+      JSON.stringify([
+        ...existingTrials,
+        {
+          schoolId:
+            activatedSchool.schoolId,
+          userId:
+            activatedUser.userId,
+          email:
+            activatedApplication.email,
+          trialStartedAt: now,
+          trialEndsAt,
+          status:
+            "ACTIVE" as const,
+        },
+      ]),
+    );
+
+    clearPendingRegistration();
+
+    setVerificationPending(false);
+    setVerificationMessage("");
+
+    setSubmittedApplication(
+      activatedApplication,
+    );
+
+    setStaffId("");
+    setPassword("");
+    setConfirmPassword("");
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+
+  async function handleVerifyEmail(): Promise<void> {
+    setError("");
+    setVerificationMessage("");
+    setVerifyingEmail(true);
+
+    try {
+      const pending =
+        getPendingRegistration();
+
+      if (!pending) {
+        setError(
+          "No pending school registration was found.",
+        );
+        return;
+      }
+
+      await activateVerifiedRegistration(
+        pending,
+      );
+    } catch (verificationError) {
+      setError(
+        verificationError instanceof
+          Error
+          ? verificationError.message
+          : "Unable to verify your email. Please try again.",
+      );
+    } finally {
+      setVerifyingEmail(false);
+    }
+  }
+
+  async function handleResendVerification(): Promise<void> {
+    setError("");
+    setVerificationMessage("");
+    setResendingVerification(true);
+
+    try {
+      await resendVerificationEmail();
+
+      setVerificationMessage(
+        "A new verification email has been sent. Please check your inbox.",
+      );
+    } catch (verificationError) {
+      setError(
+        verificationError instanceof
+          Error
+          ? verificationError.message
+          : "Unable to resend the verification email.",
+      );
+    } finally {
+      setResendingVerification(false);
+    }
+  }
+
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
 
     setError("");
+    setVerificationMessage("");
 
     const form =
       new FormData(
@@ -332,6 +616,38 @@ export default function SchoolRegistrationPage() {
         return;
       }
 
+      const pendingExisting =
+        getPendingRegistration();
+
+      if (
+        pendingExisting &&
+        normalize(
+          pendingExisting.application
+            .email,
+        ) ===
+          normalize(email)
+      ) {
+        setError(
+          "This email already has a pending verification. Please check your inbox.",
+        );
+        return;
+      }
+
+      /*
+       * Create the Firebase account first.
+       *
+       * Firebase sends the verification
+       * email immediately.
+       *
+       * The local school is NOT activated
+       * at this point.
+       */
+      const firebaseUser =
+        await registerFirebaseUser(
+          email,
+          selectedPassword,
+        );
+
       const now =
         new Date().toISOString();
 
@@ -341,16 +657,19 @@ export default function SchoolRegistrationPage() {
       const userId =
         createUserId();
 
-      const trialEndsAt =
-        createTrialEndDate(
-          now,
-        );
-
+      /*
+       * Trial dates are intentionally
+       * calculated only when the email
+       * becomes verified.
+       *
+       * Therefore the 7-day trial does
+       * not begin before verification.
+       */
       const school: School =
         {
           schoolId,
           name: schoolName,
-          status: "active",
+          status: "inactive",
           createdAt: now,
           updatedAt: now,
         };
@@ -364,41 +683,10 @@ export default function SchoolRegistrationPage() {
             administratorName,
           staffId:
             selectedStaffId,
-          status: "active",
+          status: "inactive",
           createdAt: now,
           updatedAt: now,
         };
-
-      /*
-       * Save the school first.
-       */
-      await saveSchool(
-        school,
-      );
-
-      /*
-       * Save the Principal/Admin
-       * with the explicitly controlled
-       * Staff ID.
-       */
-      await saveUser(
-        user,
-      );
-
-      /*
-       * Hash the explicitly controlled
-       * password and associate it with
-       * the same userId.
-       */
-      const credential =
-        await createPasswordCredential(
-          userId,
-          selectedPassword,
-        );
-
-      await savePasswordCredential(
-        credential,
-      );
 
       const application:
         SchoolApplication = {
@@ -420,73 +708,50 @@ export default function SchoolRegistrationPage() {
         staffCount,
         requestedPlan,
         status:
-          "ACTIVE_TRIAL",
+          "PENDING_EMAIL_VERIFICATION",
         submittedAt: now,
-        trialStartedAt:
-          now,
-        trialEndsAt,
+        trialStartedAt: "",
+        trialEndsAt: "",
+        firebaseUid:
+          firebaseUser.uid,
       };
 
-      localStorage.setItem(
-        APPLICATIONS_KEY,
-        JSON.stringify([
-          ...existingApplications,
-          application,
-        ]),
-      );
-
-      const existingTrials =
-        JSON.parse(
-          localStorage.getItem(
-            TRIALS_KEY,
-          ) ?? "[]",
-        ) as Array<{
-          schoolId: string;
-          userId: string;
-          email: string;
-          trialStartedAt: string;
-          trialEndsAt: string;
-          status:
-            | "ACTIVE"
-            | "EXPIRED";
-        }>;
-
-      localStorage.setItem(
-        TRIALS_KEY,
-        JSON.stringify([
-          ...existingTrials,
-          {
-            schoolId,
-            userId,
-            email,
-            trialStartedAt:
-              now,
-            trialEndsAt,
-            status:
-              "ACTIVE" as const,
-          },
-        ]),
-      );
-
-      setSubmittedApplication(
+      const pending:
+        PendingRegistration = {
         application,
+        user,
+        school,
+        password:
+          selectedPassword,
+        firebaseUid:
+          firebaseUser.uid,
+      };
+
+      savePendingRegistration(
+        pending,
       );
 
       /*
-       * Clear credential state after
-       * successful registration.
+       * Do not create the local password
+       * credential or trial yet.
+       *
+       * They are created only after
+       * successful email verification.
        */
-      setStaffId("");
-      setPassword("");
-      setConfirmPassword("");
+      setVerificationPending(
+        true,
+      );
 
       window.scrollTo({
         top: 0,
         behavior: "smooth",
       });
-    } catch {
+    } catch (registrationError) {
       setError(
-        "Unable to complete school registration. Please try again.",
+        registrationError instanceof
+          Error
+          ? registrationError.message
+          : "Unable to complete school registration. Please try again.",
       );
     }
   }
@@ -516,6 +781,135 @@ export default function SchoolRegistrationPage() {
       new PopStateEvent(
         "popstate",
       ),
+    );
+  }
+
+  async function cancelVerification(): Promise<void> {
+    clearPendingRegistration();
+
+    try {
+      await logoutFirebaseUser();
+    } catch {
+      // Firebase sign-out failure does
+      // not prevent returning to registration.
+    }
+
+    setVerificationPending(false);
+    setVerificationMessage("");
+    setError("");
+  }
+
+  if (verificationPending) {
+    const pending =
+      getPendingRegistration();
+
+    return (
+      <main className="registration-page">
+        <section className="registration-success">
+          <div className="registration-success-icon">
+            ✉
+          </div>
+
+          <p className="registration-kicker">
+            EMAIL VERIFICATION REQUIRED
+          </p>
+
+          <h1>
+            Verify your email address
+          </h1>
+
+          <p className="registration-success-text">
+            We created your Firebase
+            account and sent a
+            verification email to:
+          </p>
+
+          <div className="application-reference">
+            <span>
+              Email Address
+            </span>
+
+            <strong>
+              {pending?.application.email ??
+                "Your registered email"}
+            </strong>
+          </div>
+
+          <p className="registration-success-text">
+            Your school has NOT been
+            activated yet. Your 7-day
+            free trial will begin only
+            after your email is
+            successfully verified.
+          </p>
+
+          {error && (
+            <p
+              className="registration-error"
+              role="alert"
+            >
+              {error}
+            </p>
+          )}
+
+          {verificationMessage && (
+            <p
+              className="registration-success-text"
+              role="status"
+            >
+              {verificationMessage}
+            </p>
+          )}
+
+          <div className="registration-actions">
+            <button
+              type="button"
+              className="registration-primary"
+              onClick={
+                handleVerifyEmail
+              }
+              disabled={
+                verifyingEmail ||
+                resendingVerification
+              }
+            >
+              {verifyingEmail
+                ? "Checking verification..."
+                : "I Have Verified My Email"}
+            </button>
+
+            <button
+              type="button"
+              className="registration-secondary"
+              onClick={
+                handleResendVerification
+              }
+              disabled={
+                verifyingEmail ||
+                resendingVerification
+              }
+            >
+              {resendingVerification
+                ? "Sending..."
+                : "Resend Verification Email"}
+            </button>
+
+            <button
+              type="button"
+              className="registration-secondary"
+              onClick={
+                cancelVerification
+              }
+              disabled={
+                verifyingEmail ||
+                resendingVerification
+              }
+            >
+              Cancel Registration
+            </button>
+          </div>
+        </section>
+      </main>
     );
   }
 
@@ -663,7 +1057,8 @@ export default function SchoolRegistrationPage() {
           <p>
             Create your school and
             Principal/Admin account and
-            start your 7-day free trial.
+            start your 7-day free trial
+            after email verification.
           </p>
         </div>
 
@@ -1035,7 +1430,7 @@ export default function SchoolRegistrationPage() {
                 <p>
                   Choose your plan. Your
                   7-day free trial starts
-                  immediately.
+                  after email verification.
                 </p>
               </div>
             </div>
@@ -1141,8 +1536,8 @@ export default function SchoolRegistrationPage() {
               type="submit"
               className="registration-submit"
             >
-              Create School & Start
-              Free Trial
+              Create School & Continue
+              to Email Verification
             </button>
           </section>
         </form>
