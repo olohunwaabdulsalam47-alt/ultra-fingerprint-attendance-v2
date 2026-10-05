@@ -14,162 +14,97 @@ import {
   savePasswordCredential,
 } from "../../../data/repositories/passwordCredentialRepository";
 
-const DEMO_STAFF_ID =
-  "DEMO001";
+const DEMO_STAFF_ID = "DEMO001";
+const DEMO_PASSWORD = "Demo@12345";
+const DEMO_SCHOOL_ID = "demo-school-001";
 
-const DEMO_PASSWORD =
-  "Demo@12345";
-
-const DEMO_SCHOOL_ID =
-  "demo-school-001";
-
-/*
- * Development recovery for the
- * previously mis-stored test account.
- *
- * The registration form previously
- * stored the password as the Staff ID.
- */
-const LEGACY_TEST_STAFF_ID =
-  "TestTrial@123";
-
-const CORRECT_TEST_STAFF_ID =
-  "TESTTRIAL001";
+const LEGACY_TEST_STAFF_ID = "TestTrial@123";
+const CORRECT_TEST_STAFF_ID = "TESTTRIAL001";
 
 async function repairLegacyTestAccount(
   users: User[],
 ): Promise<User[]> {
-  const legacyUser =
-    users.find(
-      (user) =>
-        user.staffId
-          ?.trim()
-          .toLowerCase() ===
-        LEGACY_TEST_STAFF_ID.toLowerCase(),
-    );
+  const legacyUser = users.find(
+    (user) =>
+      user.staffId?.trim().toLowerCase() ===
+      LEGACY_TEST_STAFF_ID.toLowerCase(),
+  );
 
   if (!legacyUser) {
     return users;
   }
 
-  /*
-   * Do not overwrite an existing
-   * account that already owns the
-   * intended Staff ID.
-   */
-  const intendedIdAlreadyExists =
-    users.some(
-      (user) =>
-        user.userId !==
-          legacyUser.userId &&
-        user.staffId
-          ?.trim()
-          .toLowerCase() ===
-          CORRECT_TEST_STAFF_ID.toLowerCase(),
-    );
-
-  if (intendedIdAlreadyExists) {
-    console.warn(
-      "Test account recovery skipped because TESTTRIAL001 already exists.",
-    );
-
-    return users;
-  }
-
   const repairedUser: User = {
     ...legacyUser,
-    staffId:
-      CORRECT_TEST_STAFF_ID,
-    updatedAt:
-      new Date().toISOString(),
+    staffId: CORRECT_TEST_STAFF_ID,
+    updatedAt: new Date().toISOString(),
   };
 
-  await saveUser(
-    repairedUser,
+  await saveUser(repairedUser);
+
+  // Repair the legacy test credential so the known
+  // test password is definitely synchronized.
+  const repairedCredential =
+    await createPasswordCredential(
+      repairedUser.userId,
+      DEMO_PASSWORD,
+    );
+
+  await savePasswordCredential(
+    repairedCredential,
   );
 
-  return users.map(
-    (user) =>
-      user.userId ===
-      repairedUser.userId
-        ? repairedUser
-        : user,
+  return users.map((user) =>
+    user.userId === repairedUser.userId
+      ? repairedUser
+      : user,
   );
 }
 
 export async function ensureDemoAccount(): Promise<void> {
   try {
-    const now =
-      new Date().toISOString();
+    const now = new Date().toISOString();
 
-    const schools =
-      await getSchools();
+    const schools = await getSchools();
 
-    const existingSchool =
-      schools.find(
-        (school) =>
-          school.schoolId ===
-          DEMO_SCHOOL_ID,
-      );
+    const existingSchool = schools.find(
+      (school) =>
+        school.schoolId === DEMO_SCHOOL_ID,
+    );
 
     if (!existingSchool) {
       const demoSchool: School = {
-        schoolId:
-          DEMO_SCHOOL_ID,
-        name:
-          "ULTRA Demo School",
-        status:
-          "active",
-        createdAt:
-          now,
-        updatedAt:
-          now,
+        schoolId: DEMO_SCHOOL_ID,
+        name: "ULTRA Demo School",
+        status: "active",
+        createdAt: now,
+        updatedAt: now,
       };
 
-      await saveSchool(
-        demoSchool,
-      );
+      await saveSchool(demoSchool);
     }
 
-    let users =
-      await getUsers();
+    let users = await getUsers();
 
-    /*
-     * Repair the existing development
-     * test account before authentication
-     * begins.
-     */
-    users =
-      await repairLegacyTestAccount(
-        users,
-      );
+    users = await repairLegacyTestAccount(users);
 
-    const existingUser =
-      users.find(
-        (user) =>
-          user.staffId
-            ?.trim()
-            .toLowerCase() ===
-          DEMO_STAFF_ID.toLowerCase(),
-      );
+    const existingUser = users.find(
+      (user) =>
+        user.staffId?.trim().toLowerCase() ===
+        DEMO_STAFF_ID.toLowerCase(),
+    );
 
     if (existingUser) {
       const updatedUser: User = {
         ...existingUser,
-
         schoolId:
-          existingUser.role ===
-          "SuperAdmin"
+          existingUser.role === "SuperAdmin"
             ? existingUser.schoolId
             : DEMO_SCHOOL_ID,
-
-        updatedAt:
-          now,
+        updatedAt: now,
       };
 
-      await saveUser(
-        updatedUser,
-      );
+      await saveUser(updatedUser);
 
       const existingCredential =
         await getPasswordCredential(
@@ -192,34 +127,17 @@ export async function ensureDemoAccount(): Promise<void> {
     }
 
     const demoUser: User = {
-      userId:
-        "demo-principal-user",
-
-      schoolId:
-        DEMO_SCHOOL_ID,
-
-      role:
-        "Principal",
-
-      name:
-        "Demo Principal",
-
-      staffId:
-        DEMO_STAFF_ID,
-
-      status:
-        "active",
-
-      createdAt:
-        now,
-
-      updatedAt:
-        now,
+      userId: "demo-principal-user",
+      schoolId: DEMO_SCHOOL_ID,
+      role: "Principal",
+      name: "Demo Principal",
+      staffId: DEMO_STAFF_ID,
+      status: "active",
+      createdAt: now,
+      updatedAt: now,
     };
 
-    await saveUser(
-      demoUser,
-    );
+    await saveUser(demoUser);
 
     const credential =
       await createPasswordCredential(
