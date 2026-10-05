@@ -6,10 +6,6 @@ import "./SchoolRegistrationPage.css";
 import type { School } from "../../../domain/entities/school";
 import type { User } from "../../../domain/entities/user";
 import {
-  getSchools,
-  saveSchool,
-} from "../../../data/repositories/schoolRepository";
-import {
   getUsers,
   saveUser,
 } from "../../../data/repositories/userRepository";
@@ -17,6 +13,9 @@ import {
   createPasswordCredential,
   savePasswordCredential,
 } from "../../../data/repositories/passwordCredentialRepository";
+import {
+  saveSchool,
+} from "../../../data/repositories/schoolRepository";
 
 type ApplicationStatus = "ACTIVE_TRIAL";
 
@@ -43,118 +42,190 @@ interface SchoolApplication {
 }
 
 const TRIAL_DURATION_DAYS = 7;
-const APPLICATIONS_KEY = "ultra-school-applications";
-const TRIALS_KEY = "ultra-school-trials";
+const APPLICATIONS_KEY =
+  "ultra-school-applications";
+const TRIALS_KEY =
+  "ultra-school-trials";
 
-function createApplicationId() {
-  const timestamp = Date.now().toString(36).toUpperCase();
+function createApplicationId(): string {
+  const timestamp =
+    Date.now()
+      .toString(36)
+      .toUpperCase();
 
-  const random = crypto.randomUUID()
-    .replace(/-/g, "")
-    .slice(0, 8)
-    .toUpperCase();
+  const random =
+    crypto
+      .randomUUID()
+      .replace(/-/g, "")
+      .slice(0, 8)
+      .toUpperCase();
 
   return `UFA-${timestamp}-${random}`;
 }
 
-function createSchoolId() {
+function createSchoolId(): string {
   return `school-${crypto.randomUUID()}`;
 }
 
-function createUserId() {
+function createUserId(): string {
   return `user-${crypto.randomUUID()}`;
 }
 
-function createTrialEndDate(startedAt: string) {
-  const end = new Date(startedAt);
+function createTrialEndDate(
+  startedAt: string,
+): string {
+  const end =
+    new Date(startedAt);
+
   end.setDate(
-    end.getDate() + TRIAL_DURATION_DAYS,
+    end.getDate() +
+      TRIAL_DURATION_DAYS,
   );
 
   return end.toISOString();
 }
 
-function normalize(value: string) {
-  return value.trim().toLowerCase();
+function normalize(
+  value: string,
+): string {
+  return value
+    .trim()
+    .toLowerCase();
 }
 
 export default function SchoolRegistrationPage() {
-  const [submittedApplication, setSubmittedApplication] =
-    useState<SchoolApplication | null>(null);
+  const [
+    submittedApplication,
+    setSubmittedApplication,
+  ] =
+    useState<SchoolApplication | null>(
+      null,
+    );
 
-  const [error, setError] = useState("");
+  const [error, setError] =
+    useState("");
+
+  /*
+   * Credential fields are controlled
+   * directly by React.
+   *
+   * This prevents browser autofill from
+   * accidentally mixing the Staff ID and
+   * password values.
+   */
+  const [staffId, setStaffId] =
+    useState("");
+
+  const [password, setPassword] =
+    useState("");
+
+  const [
+    confirmPassword,
+    setConfirmPassword,
+  ] = useState("");
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
+
     setError("");
 
-    const form = new FormData(event.currentTarget);
+    const form =
+      new FormData(
+        event.currentTarget,
+      );
 
     const schoolName =
-      String(form.get("schoolName") ?? "").trim();
+      String(
+        form.get("schoolName") ??
+          "",
+      ).trim();
 
     const schoolType =
-      String(form.get("schoolType") ?? "");
+      String(
+        form.get("schoolType") ??
+          "",
+      );
 
     const address =
-      String(form.get("address") ?? "").trim();
+      String(
+        form.get("address") ??
+          "",
+      ).trim();
 
     const state =
-      String(form.get("state") ?? "").trim();
+      String(
+        form.get("state") ??
+          "",
+      ).trim();
 
     const lga =
-      String(form.get("lga") ?? "").trim();
+      String(
+        form.get("lga") ??
+          "",
+      ).trim();
 
     const administratorName =
       String(
-        form.get("administratorName") ?? "",
+        form.get(
+          "administratorName",
+        ) ?? "",
       ).trim();
 
     const administratorPosition =
       String(
-        form.get("administratorPosition") ?? "",
+        form.get(
+          "administratorPosition",
+        ) ?? "",
       );
 
-    const staffId =
-      String(
-        form.get("staffId") ?? "",
-      ).trim();
+    const selectedStaffId =
+      staffId.trim();
 
     const phone =
-      String(form.get("phone") ?? "").trim();
+      String(
+        form.get("phone") ??
+          "",
+      ).trim();
 
     const email =
-      String(form.get("email") ?? "").trim();
-
-    const password =
       String(
-        form.get("password") ?? "",
-      );
+        form.get("email") ??
+          "",
+      ).trim();
 
-    const confirmPassword =
-      String(
-        form.get("confirmPassword") ?? "",
-      );
+    const selectedPassword =
+      password;
+
+    const selectedConfirmPassword =
+      confirmPassword;
 
     const studentCount =
       String(
-        form.get("studentCount") ?? "",
+        form.get(
+          "studentCount",
+        ) ?? "",
       ).trim();
 
     const staffCount =
       String(
-        form.get("staffCount") ?? "",
+        form.get(
+          "staffCount",
+        ) ?? "",
       ).trim();
 
     const requestedPlan =
       String(
-        form.get("requestedPlan") ?? "",
+        form.get(
+          "requestedPlan",
+        ) ?? "",
       );
 
     if (!schoolName) {
-      setError("Please enter the school name.");
+      setError(
+        "Please enter the school name.",
+      );
       return;
     }
 
@@ -165,7 +236,7 @@ export default function SchoolRegistrationPage() {
       return;
     }
 
-    if (!staffId) {
+    if (!selectedStaffId) {
       setError(
         "Please enter a Principal/Admin ID.",
       );
@@ -186,29 +257,48 @@ export default function SchoolRegistrationPage() {
       return;
     }
 
-    if (password.length < 8) {
+    if (
+      selectedPassword.length <
+      8
+    ) {
       setError(
         "Password must contain at least 8 characters.",
       );
       return;
     }
 
-    if (password !== confirmPassword) {
+    if (
+      selectedPassword !==
+      selectedConfirmPassword
+    ) {
       setError(
         "Passwords do not match.",
       );
       return;
     }
 
-    try {
-      const users = await getUsers();
-
-      const duplicateStaffId = users.some(
-        (user) =>
-          user.staffId &&
-          normalize(user.staffId) ===
-            normalize(staffId),
+    if (!requestedPlan) {
+      setError(
+        "Please select a subscription plan.",
       );
+      return;
+    }
+
+    try {
+      const users =
+        await getUsers();
+
+      const duplicateStaffId =
+        users.some(
+          (user) =>
+            user.staffId &&
+            normalize(
+              user.staffId,
+            ) ===
+              normalize(
+                selectedStaffId,
+              ),
+        );
 
       if (duplicateStaffId) {
         setError(
@@ -227,8 +317,12 @@ export default function SchoolRegistrationPage() {
       const duplicateEmail =
         existingApplications.some(
           (application) =>
-            normalize(application.email) ===
-            normalize(email),
+            normalize(
+              application.email,
+            ) ===
+              normalize(
+                email,
+              ),
         );
 
       if (duplicateEmail) {
@@ -248,41 +342,66 @@ export default function SchoolRegistrationPage() {
         createUserId();
 
       const trialEndsAt =
-        createTrialEndDate(now);
+        createTrialEndDate(
+          now,
+        );
 
-      const school: School = {
-        schoolId,
-        name: schoolName,
-        status: "active",
-        createdAt: now,
-        updatedAt: now,
-      };
+      const school: School =
+        {
+          schoolId,
+          name: schoolName,
+          status: "active",
+          createdAt: now,
+          updatedAt: now,
+        };
 
-      const user: User = {
-        userId,
-        schoolId,
-        role: "Principal",
-        name: administratorName,
-        staffId,
-        status: "active",
-        createdAt: now,
-        updatedAt: now,
-      };
+      const user: User =
+        {
+          userId,
+          schoolId,
+          role: "Principal",
+          name:
+            administratorName,
+          staffId:
+            selectedStaffId,
+          status: "active",
+          createdAt: now,
+          updatedAt: now,
+        };
 
-      await saveSchool(school);
-      await saveUser(user);
+      /*
+       * Save the school first.
+       */
+      await saveSchool(
+        school,
+      );
 
+      /*
+       * Save the Principal/Admin
+       * with the explicitly controlled
+       * Staff ID.
+       */
+      await saveUser(
+        user,
+      );
+
+      /*
+       * Hash the explicitly controlled
+       * password and associate it with
+       * the same userId.
+       */
       const credential =
         await createPasswordCredential(
           userId,
-          password,
+          selectedPassword,
         );
 
       await savePasswordCredential(
         credential,
       );
 
-      const application: SchoolApplication = {
+      const application:
+        SchoolApplication = {
         applicationId:
           createApplicationId(),
         schoolId,
@@ -293,15 +412,18 @@ export default function SchoolRegistrationPage() {
         lga,
         administratorName,
         administratorPosition,
-        staffId,
+        staffId:
+          selectedStaffId,
         phone,
         email,
         studentCount,
         staffCount,
         requestedPlan,
-        status: "ACTIVE_TRIAL",
+        status:
+          "ACTIVE_TRIAL",
         submittedAt: now,
-        trialStartedAt: now,
+        trialStartedAt:
+          now,
         trialEndsAt,
       };
 
@@ -324,7 +446,9 @@ export default function SchoolRegistrationPage() {
           email: string;
           trialStartedAt: string;
           trialEndsAt: string;
-          status: "ACTIVE";
+          status:
+            | "ACTIVE"
+            | "EXPIRED";
         }>;
 
       localStorage.setItem(
@@ -335,9 +459,11 @@ export default function SchoolRegistrationPage() {
             schoolId,
             userId,
             email,
-            trialStartedAt: now,
+            trialStartedAt:
+              now,
             trialEndsAt,
-            status: "ACTIVE",
+            status:
+              "ACTIVE" as const,
           },
         ]),
       );
@@ -345,6 +471,14 @@ export default function SchoolRegistrationPage() {
       setSubmittedApplication(
         application,
       );
+
+      /*
+       * Clear credential state after
+       * successful registration.
+       */
+      setStaffId("");
+      setPassword("");
+      setConfirmPassword("");
 
       window.scrollTo({
         top: 0,
@@ -365,7 +499,9 @@ export default function SchoolRegistrationPage() {
     );
 
     window.dispatchEvent(
-      new PopStateEvent("popstate"),
+      new PopStateEvent(
+        "popstate",
+      ),
     );
   }
 
@@ -377,7 +513,9 @@ export default function SchoolRegistrationPage() {
     );
 
     window.dispatchEvent(
-      new PopStateEvent("popstate"),
+      new PopStateEvent(
+        "popstate",
+      ),
     );
   }
 
@@ -398,27 +536,39 @@ export default function SchoolRegistrationPage() {
           </h1>
 
           <p className="registration-success-text">
-            Your Principal/Admin account has
-            been created successfully. Your
-            7-day free trial has started.
+            Your Principal/Admin account
+            has been created successfully.
+            Your 7-day free trial has
+            started.
           </p>
 
           <div className="application-reference">
-            <span>Application Reference</span>
+            <span>
+              Application Reference
+            </span>
+
             <strong>
-              {submittedApplication.applicationId}
+              {
+                submittedApplication.applicationId
+              }
             </strong>
           </div>
 
           <div className="application-status">
-            <span>School Status</span>
+            <span>
+              School Status
+            </span>
+
             <strong>
               Active — Free Trial
             </strong>
           </div>
 
           <div className="application-status">
-            <span>Trial Ends</span>
+            <span>
+              Trial Ends
+            </span>
+
             <strong>
               {new Date(
                 submittedApplication.trialEndsAt,
@@ -427,9 +577,14 @@ export default function SchoolRegistrationPage() {
           </div>
 
           <div className="application-status">
-            <span>Principal/Admin ID</span>
+            <span>
+              Principal/Admin ID
+            </span>
+
             <strong>
-              {submittedApplication.staffId}
+              {
+                submittedApplication.staffId
+              }
             </strong>
           </div>
 
@@ -437,7 +592,9 @@ export default function SchoolRegistrationPage() {
             <button
               type="button"
               className="registration-primary"
-              onClick={goLogin}
+              onClick={
+                goLogin
+              }
             >
               Go to School Login
             </button>
@@ -445,7 +602,9 @@ export default function SchoolRegistrationPage() {
             <button
               type="button"
               className="registration-secondary"
-              onClick={goHome}
+              onClick={
+                goHome
+              }
             >
               Back to Website
             </button>
@@ -461,7 +620,9 @@ export default function SchoolRegistrationPage() {
         <button
           type="button"
           className="registration-brand"
-          onClick={goHome}
+          onClick={
+            goHome
+          }
         >
           <span className="registration-logo">
             FP
@@ -471,6 +632,7 @@ export default function SchoolRegistrationPage() {
             <strong>
               ULTRA FINGERPRINT
             </strong>
+
             <small>
               ATTENDANCE
             </small>
@@ -480,7 +642,9 @@ export default function SchoolRegistrationPage() {
         <button
           type="button"
           className="registration-home-link"
-          onClick={goHome}
+          onClick={
+            goHome
+          }
         >
           Back to Website
         </button>
@@ -505,17 +669,22 @@ export default function SchoolRegistrationPage() {
 
         <form
           className="registration-form"
-          onSubmit={handleSubmit}
+          onSubmit={
+            handleSubmit
+          }
         >
           <section className="registration-section">
             <div className="section-title">
               <span>01</span>
+
               <div>
                 <h2>
                   School Information
                 </h2>
+
                 <p>
-                  Tell us about your school.
+                  Tell us about your
+                  school.
                 </p>
               </div>
             </div>
@@ -531,6 +700,7 @@ export default function SchoolRegistrationPage() {
                   name="schoolName"
                   type="text"
                   placeholder="Enter official school name"
+                  autoComplete="organization"
                   required
                 />
               </div>
@@ -615,10 +785,12 @@ export default function SchoolRegistrationPage() {
           <section className="registration-section">
             <div className="section-title">
               <span>02</span>
+
               <div>
                 <h2>
                   School Location
                 </h2>
+
                 <p>
                   Provide the school's
                   location.
@@ -674,6 +846,7 @@ export default function SchoolRegistrationPage() {
           <section className="registration-section">
             <div className="section-title">
               <span>03</span>
+
               <div>
                 <h2>
                   Principal / Admin
@@ -752,8 +925,18 @@ export default function SchoolRegistrationPage() {
                   id="staffId"
                   name="staffId"
                   type="text"
+                  value={staffId}
+                  onChange={(
+                    event,
+                  ) =>
+                    setStaffId(
+                      event.target.value,
+                    )
+                  }
                   placeholder="Create your login ID"
-                  autoComplete="username"
+                  autoComplete="off"
+                  autoCapitalize="characters"
+                  spellCheck={false}
                   required
                 />
               </div>
@@ -797,6 +980,14 @@ export default function SchoolRegistrationPage() {
                   id="password"
                   name="password"
                   type="password"
+                  value={password}
+                  onChange={(
+                    event,
+                  ) =>
+                    setPassword(
+                      event.target.value,
+                    )
+                  }
                   placeholder="Minimum 8 characters"
                   autoComplete="new-password"
                   minLength={8}
@@ -813,6 +1004,16 @@ export default function SchoolRegistrationPage() {
                   id="confirmPassword"
                   name="confirmPassword"
                   type="password"
+                  value={
+                    confirmPassword
+                  }
+                  onChange={(
+                    event,
+                  ) =>
+                    setConfirmPassword(
+                      event.target.value,
+                    )
+                  }
                   placeholder="Re-enter password"
                   autoComplete="new-password"
                   minLength={8}
@@ -825,6 +1026,7 @@ export default function SchoolRegistrationPage() {
           <section className="registration-section">
             <div className="section-title">
               <span>04</span>
+
               <div>
                 <h2>
                   Subscription
