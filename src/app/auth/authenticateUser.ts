@@ -41,7 +41,7 @@ export async function authenticateUser(
       return {
         success: false,
         error:
-          "Invalid Staff ID or password.",
+          "DEBUG: Staff ID was not found in the local users database.",
       };
     }
 
@@ -64,7 +64,7 @@ export async function authenticateUser(
       return {
         success: false,
         error:
-          "No password credential is configured for this account.",
+          "DEBUG: User exists, but no password credential was found for this user.",
       };
     }
 
@@ -78,7 +78,7 @@ export async function authenticateUser(
       return {
         success: false,
         error:
-          "Invalid Staff ID or password.",
+          "DEBUG: User and password credential exist, but the password verification failed.",
       };
     }
 
