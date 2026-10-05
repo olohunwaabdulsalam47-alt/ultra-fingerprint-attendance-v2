@@ -1,6 +1,7 @@
 import type { AuthSession } from "../../../domain/entities/authSession";
 import {
   getUserByStaffId,
+  getUsers,
 } from "../../../data/repositories/userRepository";
 import {
   getPasswordCredential,
@@ -32,16 +33,27 @@ export async function authenticateUser(
   }
 
   try {
+    const users =
+      await getUsers();
+
     const user =
       await getUserByStaffId(
         normalizedStaffId,
       );
 
     if (!user) {
+      const registeredStaffIds =
+        users
+          .map(
+            (item) =>
+              item.staffId ?? "(no Staff ID)",
+          )
+          .join(", ");
+
       return {
         success: false,
         error:
-          "DEBUG: Staff ID was not found in the local users database.",
+          `DEBUG: Staff ID "${normalizedStaffId}" was not found. Users stored: ${users.length}. Staff IDs found: ${registeredStaffIds || "(none)"}.`,
       };
     }
 
@@ -64,7 +76,7 @@ export async function authenticateUser(
       return {
         success: false,
         error:
-          "DEBUG: User exists, but no password credential was found for this user.",
+          "DEBUG: User exists, but no password credential was found.",
       };
     }
 
@@ -78,7 +90,7 @@ export async function authenticateUser(
       return {
         success: false,
         error:
-          "DEBUG: User and password credential exist, but the password verification failed.",
+          "DEBUG: User and password credential exist, but password verification failed.",
       };
     }
 
