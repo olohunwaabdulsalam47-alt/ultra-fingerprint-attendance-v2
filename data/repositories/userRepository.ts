@@ -3,37 +3,56 @@ import { openDatabase } from "../db/openDatabase";
 
 const STORE_NAME = "users";
 
+function normalizeStaffId(
+  staffId: string,
+): string {
+  return staffId
+    .trim()
+    .toLowerCase();
+}
+
 export async function saveUser(
   user: User,
 ): Promise<void> {
   const db = await openDatabase();
 
-  await new Promise<void>((resolve, reject) => {
-    const transaction = db.transaction(
-      STORE_NAME,
-      "readwrite",
-    );
+  await new Promise<void>(
+    (resolve, reject) => {
+      const transaction =
+        db.transaction(
+          STORE_NAME,
+          "readwrite",
+        );
 
-    const store =
-      transaction.objectStore(STORE_NAME);
+      const store =
+        transaction.objectStore(
+          STORE_NAME,
+        );
 
-    store.put(
-      user,
-      user.userId,
-    );
-
-    transaction.oncomplete = () =>
-      resolve();
-
-    transaction.onerror = () =>
-      reject(transaction.error);
-
-    transaction.onabort = () =>
-      reject(
-        transaction.error ??
-          new Error("Transaction aborted"),
+      store.put(
+        user,
+        user.userId,
       );
-  });
+
+      transaction.oncomplete =
+        () => resolve();
+
+      transaction.onerror =
+        () =>
+          reject(
+            transaction.error,
+          );
+
+      transaction.onabort =
+        () =>
+          reject(
+            transaction.error ??
+              new Error(
+                "Transaction aborted",
+              ),
+          );
+    },
+  );
 
   db.close();
 }
@@ -58,13 +77,17 @@ export async function getUsers(): Promise<User[]> {
         const request =
           store.getAll();
 
-        request.onsuccess = () =>
-          resolve(
-            request.result as User[],
-          );
+        request.onsuccess =
+          () =>
+            resolve(
+              request.result as User[],
+            );
 
-        request.onerror = () =>
-          reject(request.error);
+        request.onerror =
+          () =>
+            reject(
+              request.error,
+            );
       },
     );
 
@@ -129,16 +152,20 @@ export async function getUserById(
         const request =
           store.get(userId);
 
-        request.onsuccess = () =>
-          resolve(
-            (request.result as
-              | User
-              | undefined) ??
-              null,
-          );
+        request.onsuccess =
+          () =>
+            resolve(
+              (request.result as
+                | User
+                | undefined) ??
+                null,
+            );
 
-        request.onerror = () =>
-          reject(request.error);
+        request.onerror =
+          () =>
+            reject(
+              request.error,
+            );
       },
     );
 
@@ -159,7 +186,9 @@ export async function getUserByIdForSchool(
   }
 
   const user =
-    await getUserById(userId);
+    await getUserById(
+      userId,
+    );
 
   if (!user) {
     return null;
@@ -210,7 +239,9 @@ export async function getUserByStaffId(
   staffId: string,
 ): Promise<User | null> {
   const selectedStaffId =
-    staffId.trim();
+    normalizeStaffId(
+      staffId,
+    );
 
   if (!selectedStaffId) {
     return null;
@@ -222,8 +253,11 @@ export async function getUserByStaffId(
   return (
     users.find(
       (user) =>
-        user.staffId ===
-        selectedStaffId,
+        user.staffId &&
+        normalizeStaffId(
+          user.staffId,
+        ) ===
+          selectedStaffId,
     ) ?? null
   );
 }
