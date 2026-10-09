@@ -2,17 +2,10 @@ import "dotenv/config";
 import { Pool } from "pg";
 
 const databaseUrl = process.env.DATABASE_URL;
-
-if (!databaseUrl) {
-  throw new Error(
-    "DATABASE_URL is not configured. Set it in the backend environment.",
-  );
-}
-
 const isProduction = process.env.NODE_ENV === "production";
 
 export const databasePool = new Pool({
-  connectionString: databaseUrl,
+  ...(databaseUrl ? { connectionString: databaseUrl } : {}),
   max: 10,
   idleTimeoutMillis: 30_000,
   connectionTimeoutMillis: 5_000,
@@ -30,6 +23,12 @@ databasePool.on("error", () => {
 });
 
 export async function checkDatabaseConnection(): Promise<void> {
+  if (!databaseUrl) {
+    throw new Error(
+      "DATABASE_URL is not configured. Set it in the backend environment.",
+    );
+  }
+
   const client = await databasePool.connect();
 
   try {
