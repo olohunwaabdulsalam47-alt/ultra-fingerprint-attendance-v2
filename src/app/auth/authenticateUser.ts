@@ -1,7 +1,6 @@
 import type { AuthSession } from "../../../domain/entities/authSession";
 import {
   getUserByStaffId,
-  getUsers,
 } from "../../../data/repositories/userRepository";
 import {
   getPasswordCredential,
@@ -14,96 +13,73 @@ interface AuthenticationResult {
   error?: string;
 }
 
+const INVALID_CREDENTIALS_MESSAGE =
+  "Invalid Staff ID or password.";
+
 export async function authenticateUser(
   staffId: string,
   password: string,
 ): Promise<AuthenticationResult> {
-  const normalizedStaffId =
-    staffId.trim();
+  const normalizedStaffId = staffId.trim();
 
-  if (
-    !normalizedStaffId ||
-    !password
-  ) {
+  if (!normalizedStaffId || !password) {
     return {
       success: false,
-      error:
-        "Staff ID and password are required.",
+      error: "Staff ID and password are required.",
     };
   }
 
   try {
-    const users =
-      await getUsers();
+    const user = await getUserByStaffId(
+      normalizedStaffId,
+    );
 
-    const user =
-      await getUserByStaffId(
-        normalizedStaffId,
-      );
-
+    // Use the same message for an unknown account
+    // and an incorrect password.
     if (!user) {
-      const registeredStaffIds =
-        users
-          .map(
-            (item) =>
-              item.staffId ?? "(no Staff ID)",
-          )
-          .join(", ");
-
       return {
         success: false,
-        error:
-          `DEBUG: Staff ID "${normalizedStaffId}" was not found. Users stored: ${users.length}. Staff IDs found: ${registeredStaffIds || "(none)"}.`,
+        error: INVALID_CREDENTIALS_MESSAGE,
       };
     }
 
-    if (
-      user.status !== "active"
-    ) {
+    if (user.status !== "active") {
       return {
         success: false,
-        error:
-          "This account is inactive.",
+        error: "This account is inactive.",
       };
     }
 
     const credential =
-      await getPasswordCredential(
-        user.userId,
-      );
+      await getPasswordCredential(user.userId);
 
     if (!credential) {
       return {
         success: false,
-        error:
-          "DEBUG: User exists, but no password credential was found.",
+        error: INVALID_CREDENTIALS_MESSAGE,
       };
     }
 
-    const validPassword =
-      await verifyPassword(
-        password,
-        credential,
-      );
+    const validPassword = await verifyPassword(
+      password,
+      credential,
+    );
 
     if (!validPassword) {
       return {
         success: false,
-        error:
-          "DEBUG: User and password credential exist, but password verification failed.",
+        error: INVALID_CREDENTIALS_MESSAGE,
       };
     }
 
     const session: AuthSession = {
       userId: user.userId,
       schoolId: user.schoolId,
-      staffId:
-        user.staffId ?? "",
+      staffId: user.staffId ?? "",
       name: user.name,
       role: user.role,
       loginMethod: "PASSWORD",
-      createdAt:
-        new Date().toISOString(),
+      createdAt: new Date().toISOString(),
     };
 
     return {
