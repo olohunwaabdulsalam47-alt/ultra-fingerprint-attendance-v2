@@ -64,7 +64,9 @@ const MANAGED_ROLE_LABELS: Record<
   PLATFORM_AUDITOR: "Platform Auditor",
 };
 
-function isPlatformRole(value: unknown): value is PlatformRole {
+function isPlatformRole(
+  value: unknown,
+): value is PlatformRole {
   return (
     typeof value === "string" &&
     Object.prototype.hasOwnProperty.call(
@@ -74,11 +76,18 @@ function isPlatformRole(value: unknown): value is PlatformRole {
   );
 }
 
-function isUserStatus(value: unknown): value is UserStatus {
-  return value === "ACTIVE" || value === "INACTIVE";
+function isUserStatus(
+  value: unknown,
+): value is UserStatus {
+  return (
+    value === "ACTIVE" ||
+    value === "INACTIVE"
+  );
 }
 
-function isPlatformUser(value: unknown): value is PlatformUser {
+function isPlatformUser(
+  value: unknown,
+): value is PlatformUser {
   if (
     typeof value !== "object" ||
     value === null
@@ -132,8 +141,6 @@ function loadUsers(): PlatformUser[] {
 
     const validUsers = parsed.filter(isPlatformUser);
 
-    // Preserve the designated SuperAdmin record if the
-    // browser's stored data has accidentally omitted it.
     const storedSuperAdmin = validUsers.find(
       (user) =>
         user.userId === PROTECTED_SUPER_ADMIN_ID ||
@@ -156,7 +163,7 @@ function loadUsers(): PlatformUser[] {
       status: "ACTIVE",
     };
 
-    const normalizedUsers = [
+    const normalizedUsers: PlatformUser[] = [
       protectedUser,
       ...otherUsers,
     ];
@@ -197,11 +204,15 @@ function formatDate(value: string) {
   });
 }
 
-function generateUserId(users: PlatformUser[]) {
+function generateUserId(
+  users: PlatformUser[],
+) {
   let number = users.length + 1;
   let userId = `PU-${String(number).padStart(4, "0")}`;
 
-  while (users.some((user) => user.userId === userId)) {
+  while (
+    users.some((user) => user.userId === userId)
+  ) {
     number += 1;
     userId = `PU-${String(number).padStart(4, "0")}`;
   }
@@ -209,13 +220,20 @@ function generateUserId(users: PlatformUser[]) {
   return userId;
 }
 
-function generateStaffId(users: PlatformUser[]) {
+function generateStaffId(
+  users: PlatformUser[],
+) {
   let number = users.length + 1;
-  let staffId = `UFA-PS-${String(number).padStart(3, "0")}`;
 
-  while (users.some((user) => user.staffId === staffId)) {
+  let staffId =
+    `UFA-PS-${String(number).padStart(3, "0")}`;
+
+  while (
+    users.some((user) => user.staffId === staffId)
+  ) {
     number += 1;
-    staffId = `UFA-PS-${String(number).padStart(3, "0")}`;
+    staffId =
+      `UFA-PS-${String(number).padStart(3, "0")}`;
   }
 
   return staffId;
@@ -291,7 +309,9 @@ export default function SuperAdminUsersPage() {
     (user) => user.role === "SUPER_ADMIN",
   ).length;
 
-  function updateUsers(nextUsers: PlatformUser[]) {
+  function updateUsers(
+    nextUsers: PlatformUser[],
+  ) {
     setUsers(nextUsers);
     saveUsers(nextUsers);
   }
@@ -313,19 +333,25 @@ export default function SuperAdminUsersPage() {
       return;
     }
 
-    const nextUsers = users.map((user) => {
-      if (user.userId !== userId) {
-        return user;
-      }
+    // Explicit types prevent TypeScript from widening
+    // the status field to a general string.
+    const nextUsers: PlatformUser[] = users.map(
+      (user): PlatformUser => {
+        if (user.userId !== userId) {
+          return user;
+        }
 
-      return {
-        ...user,
-        status:
+        const nextStatus: UserStatus =
           user.status === "ACTIVE"
             ? "INACTIVE"
-            : "ACTIVE",
-      };
-    });
+            : "ACTIVE";
+
+        return {
+          ...user,
+          status: nextStatus,
+        };
+      },
+    );
 
     updateUsers(nextUsers);
 
@@ -346,7 +372,10 @@ export default function SuperAdminUsersPage() {
     userId: string,
     role: PlatformRole,
   ) {
-    if (!isPlatformRole(role) || role === "SUPER_ADMIN") {
+    if (
+      !isPlatformRole(role) ||
+      role === "SUPER_ADMIN"
+    ) {
       setMessage(
         "Assigning the Super Admin role is not permitted here.",
       );
@@ -369,10 +398,11 @@ export default function SuperAdminUsersPage() {
       return;
     }
 
-    const nextUsers = users.map((user) =>
-      user.userId === userId
-        ? { ...user, role }
-        : user,
+    const nextUsers: PlatformUser[] = users.map(
+      (user): PlatformUser =>
+        user.userId === userId
+          ? { ...user, role }
+          : user,
     );
 
     updateUsers(nextUsers);
@@ -423,7 +453,8 @@ export default function SuperAdminUsersPage() {
 
     const emailExists = users.some(
       (user) =>
-        user.email.toLowerCase() === email.toLowerCase(),
+        user.email.toLowerCase() ===
+        email.toLowerCase(),
     );
 
     if (emailExists) {
@@ -447,7 +478,10 @@ export default function SuperAdminUsersPage() {
       createdAt: now,
     };
 
-    const nextUsers = [...users, newUser];
+    const nextUsers: PlatformUser[] = [
+      ...users,
+      newUser,
+    ];
 
     updateUsers(nextUsers);
 
@@ -455,7 +489,9 @@ export default function SuperAdminUsersPage() {
     setSelectedUser(newUser);
     resetForm();
 
-    setMessage("Platform user created successfully.");
+    setMessage(
+      "Platform user created successfully.",
+    );
   }
 
   return (
@@ -533,7 +569,9 @@ export default function SuperAdminUsersPage() {
           value={roleFilter}
           onChange={(event) =>
             setRoleFilter(
-              event.target.value as "ALL" | PlatformRole,
+              event.target.value as
+                | "ALL"
+                | PlatformRole,
             )
           }
           aria-label="Filter by platform role"
@@ -553,7 +591,9 @@ export default function SuperAdminUsersPage() {
           value={statusFilter}
           onChange={(event) =>
             setStatusFilter(
-              event.target.value as "ALL" | UserStatus,
+              event.target.value as
+                | "ALL"
+                | UserStatus,
             )
           }
           aria-label="Filter by account status"
@@ -605,7 +645,9 @@ export default function SuperAdminUsersPage() {
                     <td>
                       <div className="user-cell">
                         <div className="user-avatar">
-                          {user.name.charAt(0).toUpperCase()}
+                          {user.name
+                            .charAt(0)
+                            .toUpperCase()}
                         </div>
 
                         <div>
@@ -631,8 +673,13 @@ export default function SuperAdminUsersPage() {
                       </span>
                     </td>
 
-                    <td>{formatDate(user.lastLogin)}</td>
-                    <td>{formatDate(user.createdAt)}</td>
+                    <td>
+                      {formatDate(user.lastLogin)}
+                    </td>
+
+                    <td>
+                      {formatDate(user.createdAt)}
+                    </td>
 
                     <td>
                       <button
@@ -676,7 +723,9 @@ export default function SuperAdminUsersPage() {
               <button
                 className="close-button"
                 type="button"
-                onClick={() => setSelectedUser(null)}
+                onClick={() =>
+                  setSelectedUser(null)
+                }
                 aria-label="Close"
               >
                 ×
@@ -685,13 +734,17 @@ export default function SuperAdminUsersPage() {
 
             <div className="profile-summary">
               <div className="large-avatar">
-                {selectedUser.name.charAt(0).toUpperCase()}
+                {selectedUser.name
+                  .charAt(0)
+                  .toUpperCase()}
               </div>
 
               <div>
                 <strong>{selectedUser.name}</strong>
                 <span>{selectedUser.email}</span>
-                <span>{selectedUser.phone || "No phone"}</span>
+                <span>
+                  {selectedUser.phone || "No phone"}
+                </span>
               </div>
             </div>
 
@@ -708,12 +761,16 @@ export default function SuperAdminUsersPage() {
 
               <div>
                 <span>Created</span>
-                <strong>{formatDate(selectedUser.createdAt)}</strong>
+                <strong>
+                  {formatDate(selectedUser.createdAt)}
+                </strong>
               </div>
 
               <div>
                 <span>Last Login</span>
-                <strong>{formatDate(selectedUser.lastLogin)}</strong>
+                <strong>
+                  {formatDate(selectedUser.lastLogin)}
+                </strong>
               </div>
             </div>
 
@@ -745,17 +802,21 @@ export default function SuperAdminUsersPage() {
                     onChange={(event) =>
                       updateRole(
                         selectedUser.userId,
-                        event.target.value as PlatformRole,
+                        event.target
+                          .value as PlatformRole,
                       )
                     }
                   >
-                    {Object.entries(MANAGED_ROLE_LABELS).map(
-                      ([role, label]) => (
-                        <option key={role} value={role}>
-                          {label}
-                        </option>
-                      ),
-                    )}
+                    {Object.entries(
+                      MANAGED_ROLE_LABELS,
+                    ).map(([role, label]) => (
+                      <option
+                        key={role}
+                        value={role}
+                      >
+                        {label}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -795,7 +856,9 @@ export default function SuperAdminUsersPage() {
               <button
                 className="secondary-button"
                 type="button"
-                onClick={() => setSelectedUser(null)}
+                onClick={() =>
+                  setSelectedUser(null)
+                }
               >
                 Close
               </button>
@@ -890,17 +953,22 @@ export default function SuperAdminUsersPage() {
                         value,
                       )
                     ) {
-                      setNewRole(value as ManagedPlatformRole);
+                      setNewRole(
+                        value as ManagedPlatformRole,
+                      );
                     }
                   }}
                 >
-                  {Object.entries(MANAGED_ROLE_LABELS).map(
-                    ([role, label]) => (
-                      <option key={role} value={role}>
-                        {label}
-                      </option>
-                    ),
-                  )}
+                  {Object.entries(
+                    MANAGED_ROLE_LABELS,
+                  ).map(([role, label]) => (
+                    <option
+                      key={role}
+                      value={role}
+                    >
+                      {label}
+                    </option>
+                  ))}
                 </select>
               </label>
             </div>
