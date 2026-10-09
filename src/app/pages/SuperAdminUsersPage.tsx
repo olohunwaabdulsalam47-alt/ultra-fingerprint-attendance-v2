@@ -8,6 +8,11 @@ type PlatformRole =
   | "PLATFORM_FINANCE"
   | "PLATFORM_AUDITOR";
 
+type ManagedPlatformRole = Exclude<
+  PlatformRole,
+  "SUPER_ADMIN"
+>;
+
 type UserStatus = "ACTIVE" | "INACTIVE";
 
 interface PlatformUser {
@@ -24,10 +29,13 @@ interface PlatformUser {
 
 const STORAGE_KEY = "ultra-platform-users";
 
+const PROTECTED_SUPER_ADMIN_ID = "PU-0001";
+const PROTECTED_SUPER_ADMIN_STAFF_ID = "UFA-SA-001";
+
 const DEMO_USERS: PlatformUser[] = [
   {
-    userId: "PU-0001",
-    staffId: "UFA-SA-001",
+    userId: PROTECTED_SUPER_ADMIN_ID,
+    staffId: PROTECTED_SUPER_ADMIN_STAFF_ID,
     name: "Platform Super Administrator",
     email: "superadmin@ultrafingerprint.com",
     phone: "+234 800 000 0001",
@@ -46,6 +54,63 @@ const ROLE_LABELS: Record<PlatformRole, string> = {
   PLATFORM_AUDITOR: "Platform Auditor",
 };
 
+const MANAGED_ROLE_LABELS: Record<
+  ManagedPlatformRole,
+  string
+> = {
+  PLATFORM_ADMIN: "Platform Admin",
+  PLATFORM_SUPPORT: "Platform Support",
+  PLATFORM_FINANCE: "Platform Finance",
+  PLATFORM_AUDITOR: "Platform Auditor",
+};
+
+function isPlatformRole(value: unknown): value is PlatformRole {
+  return (
+    typeof value === "string" &&
+    Object.prototype.hasOwnProperty.call(
+      ROLE_LABELS,
+      value,
+    )
+  );
+}
+
+function isUserStatus(value: unknown): value is UserStatus {
+  return value === "ACTIVE" || value === "INACTIVE";
+}
+
+function isPlatformUser(value: unknown): value is PlatformUser {
+  if (
+    typeof value !== "object" ||
+    value === null
+  ) {
+    return false;
+  }
+
+  const user = value as Record<string, unknown>;
+
+  return (
+    typeof user.userId === "string" &&
+    typeof user.staffId === "string" &&
+    typeof user.name === "string" &&
+    typeof user.email === "string" &&
+    typeof user.phone === "string" &&
+    isPlatformRole(user.role) &&
+    isUserStatus(user.status) &&
+    typeof user.lastLogin === "string" &&
+    typeof user.createdAt === "string"
+  );
+}
+
+function isProtectedSuperAdmin(
+  user: PlatformUser,
+): boolean {
+  return (
+    user.userId === PROTECTED_SUPER_ADMIN_ID ||
+    user.staffId === PROTECTED_SUPER_ADMIN_STAFF_ID ||
+    user.role === "SUPER_ADMIN"
+  );
+}
+
 function loadUsers(): PlatformUser[] {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -55,6 +120,7 @@ function loadUsers(): PlatformUser[] {
         STORAGE_KEY,
         JSON.stringify(DEMO_USERS),
       );
+
       return DEMO_USERS;
     }
 
@@ -64,7 +130,43 @@ function loadUsers(): PlatformUser[] {
       return DEMO_USERS;
     }
 
-    return parsed as PlatformUser[];
+    const validUsers = parsed.filter(isPlatformUser);
+
+    // Preserve the designated SuperAdmin record if the
+    // browser's stored data has accidentally omitted it.
+    const storedSuperAdmin = validUsers.find(
+      (user) =>
+        user.userId === PROTECTED_SUPER_ADMIN_ID ||
+        user.staffId === PROTECTED_SUPER_ADMIN_STAFF_ID,
+    );
+
+    const otherUsers = validUsers.filter(
+      (user) =>
+        user.userId !== PROTECTED_SUPER_ADMIN_ID &&
+        user.staffId !== PROTECTED_SUPER_ADMIN_STAFF_ID &&
+        user.role !== "SUPER_ADMIN",
+    );
+
+    const protectedUser: PlatformUser = {
+      ...DEMO_USERS[0],
+      ...(storedSuperAdmin ?? {}),
+      userId: PROTECTED_SUPER_ADMIN_ID,
+      staffId: PROTECTED_SUPER_ADMIN_STAFF_ID,
+      role: "SUPER_ADMIN",
+      status: "ACTIVE",
+    };
+
+    const normalizedUsers = [
+      protectedUser,
+      ...otherUsers,
+    ];
+
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(normalizedUsers),
+    );
+
+    return normalizedUsers;
   } catch {
     return DEMO_USERS;
   }
@@ -96,11 +198,27 @@ function formatDate(value: string) {
 }
 
 function generateUserId(users: PlatformUser[]) {
-  return `PU-${String(users.length + 1).padStart(4, "0")}`;
+  let number = users.length + 1;
+  let userId = `PU-${String(number).padStart(4, "0")}`;
+
+  while (users.some((user) => user.userId === userId)) {
+    number += 1;
+    userId = `PU-${String(number).padStart(4, "0")}`;
+  }
+
+  return userId;
 }
 
 function generateStaffId(users: PlatformUser[]) {
-  return `UFA-PS-${String(users.length + 1).padStart(3, "0")}`;
+  let number = users.length + 1;
+  let staffId = `UFA-PS-${String(number).padStart(3, "0")}`;
+
+  while (users.some((user) => user.staffId === staffId)) {
+    number += 1;
+    staffId = `UFA-PS-${String(number).padStart(3, "0")}`;
+  }
+
+  return staffId;
 }
 
 export default function SuperAdminUsersPage() {
@@ -131,7 +249,7 @@ export default function SuperAdminUsersPage() {
   const [newPhone, setNewPhone] = useState("");
 
   const [newRole, setNewRole] =
-    useState<PlatformRole>("PLATFORM_ADMIN");
+    useState<ManagedPlatformRole>("PLATFORM_ADMIN");
 
   const filteredUsers = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -179,23 +297,35 @@ export default function SuperAdminUsersPage() {
   }
 
   function toggleStatus(userId: string) {
-    const nextUsers: PlatformUser[] = users.map(
-      (user): PlatformUser => {
-        if (user.userId !== userId) {
-          return user;
-        }
+    const targetUser = users.find(
+      (user) => user.userId === userId,
+    );
 
-        const nextStatus: UserStatus =
+    if (!targetUser) {
+      setMessage("User not found.");
+      return;
+    }
+
+    if (isProtectedSuperAdmin(targetUser)) {
+      setMessage(
+        "The protected Super Admin account cannot be deactivated or reactivated here.",
+      );
+      return;
+    }
+
+    const nextUsers = users.map((user) => {
+      if (user.userId !== userId) {
+        return user;
+      }
+
+      return {
+        ...user,
+        status:
           user.status === "ACTIVE"
             ? "INACTIVE"
-            : "ACTIVE";
-
-        return {
-          ...user,
-          status: nextStatus,
-        };
-      },
-    );
+            : "ACTIVE",
+      };
+    });
 
     updateUsers(nextUsers);
 
@@ -216,11 +346,33 @@ export default function SuperAdminUsersPage() {
     userId: string,
     role: PlatformRole,
   ) {
-    const nextUsers: PlatformUser[] = users.map(
-      (user): PlatformUser =>
-        user.userId === userId
-          ? { ...user, role }
-          : user,
+    if (!isPlatformRole(role) || role === "SUPER_ADMIN") {
+      setMessage(
+        "Assigning the Super Admin role is not permitted here.",
+      );
+      return;
+    }
+
+    const targetUser = users.find(
+      (user) => user.userId === userId,
+    );
+
+    if (!targetUser) {
+      setMessage("User not found.");
+      return;
+    }
+
+    if (isProtectedSuperAdmin(targetUser)) {
+      setMessage(
+        "The protected Super Admin role cannot be changed here.",
+      );
+      return;
+    }
+
+    const nextUsers = users.map((user) =>
+      user.userId === userId
+        ? { ...user, role }
+        : user,
     );
 
     updateUsers(nextUsers);
@@ -257,10 +409,21 @@ export default function SuperAdminUsersPage() {
       return;
     }
 
+    if (
+      !Object.prototype.hasOwnProperty.call(
+        MANAGED_ROLE_LABELS,
+        newRole,
+      )
+    ) {
+      setMessage(
+        "The selected platform role is not permitted.",
+      );
+      return;
+    }
+
     const emailExists = users.some(
       (user) =>
-        user.email.toLowerCase() ===
-        email.toLowerCase(),
+        user.email.toLowerCase() === email.toLowerCase(),
     );
 
     if (emailExists) {
@@ -284,10 +447,7 @@ export default function SuperAdminUsersPage() {
       createdAt: now,
     };
 
-    const nextUsers: PlatformUser[] = [
-      ...users,
-      newUser,
-    ];
+    const nextUsers = [...users, newUser];
 
     updateUsers(nextUsers);
 
@@ -295,9 +455,7 @@ export default function SuperAdminUsersPage() {
     setSelectedUser(newUser);
     resetForm();
 
-    setMessage(
-      "Platform user created successfully.",
-    );
+    setMessage("Platform user created successfully.");
   }
 
   return (
@@ -308,7 +466,7 @@ export default function SuperAdminUsersPage() {
             PLATFORM ADMINISTRATION
           </p>
 
-          <h1>Platform Users & Roles</h1>
+          <h1>Platform Users &amp; Roles</h1>
 
           <p>
             Manage users who administer and support the
@@ -329,7 +487,11 @@ export default function SuperAdminUsersPage() {
       </header>
 
       {message && (
-        <div className="users-message">
+        <div
+          className="users-message"
+          role="status"
+          aria-live="polite"
+        >
           {message}
         </div>
       )}
@@ -364,17 +526,17 @@ export default function SuperAdminUsersPage() {
           onChange={(event) =>
             setSearch(event.target.value)
           }
+          aria-label="Search platform users"
         />
 
         <select
           value={roleFilter}
           onChange={(event) =>
             setRoleFilter(
-              event.target.value as
-                | "ALL"
-                | PlatformRole,
+              event.target.value as "ALL" | PlatformRole,
             )
           }
+          aria-label="Filter by platform role"
         >
           <option value="ALL">All roles</option>
 
@@ -391,11 +553,10 @@ export default function SuperAdminUsersPage() {
           value={statusFilter}
           onChange={(event) =>
             setStatusFilter(
-              event.target.value as
-                | "ALL"
-                | UserStatus,
+              event.target.value as "ALL" | UserStatus,
             )
           }
+          aria-label="Filter by account status"
         >
           <option value="ALL">All statuses</option>
           <option value="ACTIVE">Active</option>
@@ -410,18 +571,14 @@ export default function SuperAdminUsersPage() {
 
             <span>
               {filteredUsers.length} user
-              {filteredUsers.length === 1
-                ? ""
-                : "s"} found
+              {filteredUsers.length === 1 ? "" : "s"} found
             </span>
           </div>
         </div>
 
         {filteredUsers.length === 0 ? (
           <div className="empty-users">
-            <strong>
-              No platform users found
-            </strong>
+            <strong>No platform users found</strong>
 
             <p>
               Try changing your search or filters.
@@ -448,19 +605,12 @@ export default function SuperAdminUsersPage() {
                     <td>
                       <div className="user-cell">
                         <div className="user-avatar">
-                          {user.name
-                            .charAt(0)
-                            .toUpperCase()}
+                          {user.name.charAt(0).toUpperCase()}
                         </div>
 
                         <div>
-                          <strong>
-                            {user.name}
-                          </strong>
-
-                          <span>
-                            {user.email}
-                          </span>
+                          <strong>{user.name}</strong>
+                          <span>{user.email}</span>
                         </div>
                       </div>
                     </td>
@@ -481,21 +631,17 @@ export default function SuperAdminUsersPage() {
                       </span>
                     </td>
 
-                    <td>
-                      {formatDate(user.lastLogin)}
-                    </td>
-
-                    <td>
-                      {formatDate(user.createdAt)}
-                    </td>
+                    <td>{formatDate(user.lastLogin)}</td>
+                    <td>{formatDate(user.createdAt)}</td>
 
                     <td>
                       <button
                         className="view-button"
                         type="button"
-                        onClick={() =>
-                          setSelectedUser(user)
-                        }
+                        onClick={() => {
+                          setSelectedUser(user);
+                          setMessage("");
+                        }}
                       >
                         View
                       </button>
@@ -510,22 +656,27 @@ export default function SuperAdminUsersPage() {
 
       {selectedUser && (
         <div className="modal-backdrop">
-          <div className="users-modal">
+          <div
+            className="users-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="platform-user-title"
+          >
             <div className="modal-header">
               <div>
                 <p className="page-eyebrow">
                   PLATFORM USER
                 </p>
 
-                <h2>{selectedUser.name}</h2>
+                <h2 id="platform-user-title">
+                  {selectedUser.name}
+                </h2>
               </div>
 
               <button
                 className="close-button"
                 type="button"
-                onClick={() =>
-                  setSelectedUser(null)
-                }
+                onClick={() => setSelectedUser(null)}
                 aria-label="Close"
               >
                 ×
@@ -534,127 +685,117 @@ export default function SuperAdminUsersPage() {
 
             <div className="profile-summary">
               <div className="large-avatar">
-                {selectedUser.name
-                  .charAt(0)
-                  .toUpperCase()}
+                {selectedUser.name.charAt(0).toUpperCase()}
               </div>
 
               <div>
-                <strong>
-                  {selectedUser.name}
-                </strong>
-
-                <span>
-                  {selectedUser.email}
-                </span>
-
-                <span>
-                  {selectedUser.phone ||
-                    "No phone"}
-                </span>
+                <strong>{selectedUser.name}</strong>
+                <span>{selectedUser.email}</span>
+                <span>{selectedUser.phone || "No phone"}</span>
               </div>
             </div>
 
             <div className="user-details-grid">
               <div>
                 <span>User ID</span>
-                <strong>
-                  {selectedUser.userId}
-                </strong>
+                <strong>{selectedUser.userId}</strong>
               </div>
 
               <div>
                 <span>Staff ID</span>
-                <strong>
-                  {selectedUser.staffId}
-                </strong>
+                <strong>{selectedUser.staffId}</strong>
               </div>
 
               <div>
                 <span>Created</span>
-                <strong>
-                  {formatDate(
-                    selectedUser.createdAt,
-                  )}
-                </strong>
+                <strong>{formatDate(selectedUser.createdAt)}</strong>
               </div>
 
               <div>
                 <span>Last Login</span>
-                <strong>
-                  {formatDate(
-                    selectedUser.lastLogin,
-                  )}
-                </strong>
+                <strong>{formatDate(selectedUser.lastLogin)}</strong>
               </div>
             </div>
 
-            <div className="modal-section">
-              <label htmlFor="platform-role">
-                Platform Role
-              </label>
+            {isProtectedSuperAdmin(selectedUser) ? (
+              <div className="modal-section">
+                <span className="detail-label">
+                  Protected Platform Role
+                </span>
 
-              <select
-                id="platform-role"
-                value={selectedUser.role}
-                onChange={(event) =>
-                  updateRole(
-                    selectedUser.userId,
-                    event.target
-                      .value as PlatformRole,
-                  )
-                }
-              >
-                {Object.entries(ROLE_LABELS).map(
-                  ([role, label]) => (
-                    <option
-                      key={role}
-                      value={role}
-                    >
-                      {label}
-                    </option>
-                  ),
-                )}
-              </select>
-            </div>
+                <span className="role-badge">
+                  Super Admin
+                </span>
 
-            <div className="modal-section">
-              <span className="detail-label">
-                Account Status
-              </span>
+                <p>
+                  This account is protected from role and
+                  status changes in this interface.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="modal-section">
+                  <label htmlFor="platform-role">
+                    Platform Role
+                  </label>
 
-              <span
-                className={`status-badge ${selectedUser.status.toLowerCase()}`}
-              >
-                {selectedUser.status}
-              </span>
-            </div>
+                  <select
+                    id="platform-role"
+                    value={selectedUser.role}
+                    onChange={(event) =>
+                      updateRole(
+                        selectedUser.userId,
+                        event.target.value as PlatformRole,
+                      )
+                    }
+                  >
+                    {Object.entries(MANAGED_ROLE_LABELS).map(
+                      ([role, label]) => (
+                        <option key={role} value={role}>
+                          {label}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </div>
+
+                <div className="modal-section">
+                  <span className="detail-label">
+                    Account Status
+                  </span>
+
+                  <span
+                    className={`status-badge ${selectedUser.status.toLowerCase()}`}
+                  >
+                    {selectedUser.status}
+                  </span>
+                </div>
+              </>
+            )}
 
             <div className="modal-actions">
-              <button
-                className={
-                  selectedUser.status === "ACTIVE"
-                    ? "danger-button"
-                    : "primary-button"
-                }
-                type="button"
-                onClick={() =>
-                  toggleStatus(
-                    selectedUser.userId,
-                  )
-                }
-              >
-                {selectedUser.status === "ACTIVE"
-                  ? "Deactivate Account"
-                  : "Reactivate Account"}
-              </button>
+              {!isProtectedSuperAdmin(selectedUser) && (
+                <button
+                  className={
+                    selectedUser.status === "ACTIVE"
+                      ? "danger-button"
+                      : "primary-button"
+                  }
+                  type="button"
+                  onClick={() =>
+                    toggleStatus(selectedUser.userId)
+                  }
+                >
+                  {selectedUser.status === "ACTIVE"
+                    ? "Deactivate Account"
+                    : "Reactivate Account"}
+                </button>
+              )}
 
               <button
                 className="secondary-button"
                 type="button"
-                onClick={() =>
-                  setSelectedUser(null)
-                }
+                onClick={() => setSelectedUser(null)}
               >
                 Close
               </button>
@@ -665,14 +806,21 @@ export default function SuperAdminUsersPage() {
 
       {showCreateModal && (
         <div className="modal-backdrop">
-          <div className="users-modal create-user-modal">
+          <div
+            className="users-modal create-user-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-platform-user-title"
+          >
             <div className="modal-header">
               <div>
                 <p className="page-eyebrow">
                   PLATFORM ADMINISTRATION
                 </p>
 
-                <h2>Add Platform User</h2>
+                <h2 id="create-platform-user-title">
+                  Add Platform User
+                </h2>
               </div>
 
               <button
@@ -733,36 +881,37 @@ export default function SuperAdminUsersPage() {
 
                 <select
                   value={newRole}
-                  onChange={(event) =>
-                    setNewRole(
-                      event.target
-                        .value as PlatformRole,
-                    )
-                  }
+                  onChange={(event) => {
+                    const value = event.target.value;
+
+                    if (
+                      Object.prototype.hasOwnProperty.call(
+                        MANAGED_ROLE_LABELS,
+                        value,
+                      )
+                    ) {
+                      setNewRole(value as ManagedPlatformRole);
+                    }
+                  }}
                 >
-                  {Object.entries(ROLE_LABELS)
-                    .filter(
-                      ([role]) =>
-                        role !== "SUPER_ADMIN",
-                    )
-                    .map(([role, label]) => (
-                      <option
-                        key={role}
-                        value={role}
-                      >
+                  {Object.entries(MANAGED_ROLE_LABELS).map(
+                    ([role, label]) => (
+                      <option key={role} value={role}>
                         {label}
                       </option>
-                    ))}
+                    ),
+                  )}
                 </select>
               </label>
             </div>
 
             <div className="modal-note">
-              New accounts are created as active
-              platform accounts. Authentication and
-              password management will be connected to
-              the secure identity system in a later
-              security batch.
+              New accounts are currently saved in this
+              browser only. Secure authentication,
+              server-side authorization, and password
+              management still need to be connected before
+              these records can be treated as secure
+              platform accounts.
             </div>
 
             <div className="modal-actions">
