@@ -1,10 +1,10 @@
 import { Router, type Request, type Response } from "express";
-import { randomBytes } from "node:crypto";
 
 import { databasePool } from "../config/database.js";
 import { authenticateSuperAdmin } from "./superAdminAuthService.js";
 import {
   createPlatformSession,
+  revokeSuperAdminSession,
 } from "./sessionService.js";
 import {
   createOtpChallenge,
@@ -15,6 +15,7 @@ import {
   hashToken,
 } from "./crypto.js";
 import { sendSuperAdminOtpSms } from "./termiiSmsService.js";
+import { requireSuperAdmin } from "./superAdminAuthMiddleware.js";
 
 const router = Router();
 
@@ -51,7 +52,6 @@ function isRateLimited(request: Request): boolean {
   const now = Date.now();
   const key = getClientKey(request);
 
-  // Remove expired entries to prevent unnecessary memory growth.
   for (const [entryKey, entry] of rateLimits.entries()) {
     if (entry.resetAt <= now) {
       rateLimits.delete(entryKey);
@@ -72,6 +72,15 @@ function isRateLimited(request: Request): boolean {
   entry.count += 1;
 
   return entry.count > RATE_LIMIT_MAX;
+}
+
+function rejectRateLimitedRequest(response: Response): void {
+  response.setHeader("Retry-After", "900");
+
+  response.status(429).json({
+    success: false,
+    message: "Too many attempts. Please try again later.",
+  });
 }
 
 function readCookie(
@@ -144,21 +153,15 @@ function invalidRequest(response: Response): void {
 /**
  * POST /api/superadmin/login
  *
- * Checks the SuperAdmin's phone number and password.
- * Trusted devices can proceed without another OTP.
- * Untrusted devices must complete SMS verification.
+ * Authenticates the SuperAdmin using a phone number and password.
+ * A trusted device can proceed without another OTP.
+ * An untrusted device must complete SMS verification.
  */
 router.post(
   "/login",
   async (request: Request, response: Response) => {
     if (isRateLimited(request)) {
-      response.setHeader("Retry-After", "900");
-
-      response.status(429).json({
-        success: false,
-        message: "Too many attempts. Please try again later.",
-      });
-
+      rejectRateLimitedRequest(response);
       return;
     }
 
@@ -188,15 +191,12 @@ router.post(
           success: false,
           message: "Invalid phone number or password.",
         });
-
         return;
       }
 
       const deviceToken = readCookie(request, DEVICE_COOKIE);
 
       if (deviceToken) {
-        const deviceTokenHash = hashToken(deviceToken);
-
         const trustedDeviceResult = await databasePool.query<{
           id: string;
         }>(
@@ -207,7 +207,7 @@ router.post(
              AND revoked_at IS NULL
              AND expires_at > NOW()
            LIMIT 1`,
-          [user.id, deviceTokenHash],
+          [user.id, hashToken(deviceToken)],
         );
 
         const trustedDevice = trustedDeviceResult.rows[0];
@@ -248,8 +248,6 @@ router.post(
         user.phoneNumber,
       );
 
-      // The OTP must be sent by SMS.
-      // Never include challenge.otpCode in the HTTP response.
       const delivery = await sendSuperAdminOtpSms(
         user.phoneNumber,
         challenge.otpCode,
@@ -258,9 +256,9 @@ router.post(
       if (!delivery.success) {
         response.status(503).json({
           success: false,
-          message: "Verification SMS could not be sent. Please try again.",
+          message:
+            "Verification SMS could not be sent. Please try again.",
         });
-
         return;
       }
 
@@ -283,20 +281,13 @@ router.post(
 /**
  * POST /api/superadmin/verify-otp
  *
- * Verifies an OTP and registers the device as trusted.
- * A session is issued only after successful verification.
+ * Verifies the OTP, registers a trusted device, and creates a session.
  */
 router.post(
   "/verify-otp",
   async (request: Request, response: Response) => {
     if (isRateLimited(request)) {
-      response.setHeader("Retry-After", "900");
-
-      response.status(429).json({
-        success: false,
-        message: "Too many attempts. Please try again later.",
-      });
-
+      rejectRateLimitedRequest(response);
       return;
     }
 
@@ -344,7 +335,6 @@ router.post(
         return;
       }
 
-      // Retrieve the account associated with the now-consumed challenge.
       const challengeResult = await databasePool.query<{
         platform_user_id: string;
         phone_number: string;
@@ -370,7 +360,6 @@ router.post(
           success: false,
           message: "The verification could not be completed.",
         });
-
         return;
       }
 
@@ -426,9 +415,64 @@ router.post(
 );
 
 /**
+ * GET /api/superadmin/me
+ *
+ * Returns the current SuperAdmin only when a valid server-side
+ * session has been verified by the authentication middleware.
+ */
+router.get(
+  "/me",
+  requireSuperAdmin,
+  async (_request: Request, response: Response) => {
+    const platformUserId = response.locals.superAdminId;
+
+    try {
+      const result = await databasePool.query<{
+        id: string;
+        full_name: string;
+        phone_number: string;
+      }>(
+        `SELECT id, full_name, phone_number
+         FROM platform_users
+         WHERE id = $1
+           AND role = 'SUPER_ADMIN'
+           AND is_active = TRUE
+         LIMIT 1`,
+        [platformUserId],
+      );
+
+      const user = result.rows[0];
+
+      if (!user) {
+        response.status(401).json({
+          success: false,
+          message: "The SuperAdmin account is no longer active.",
+        });
+        return;
+      }
+
+      response.status(200).json({
+        success: true,
+        user: {
+          id: user.id,
+          fullName: user.full_name,
+          phoneNumber: user.phone_number,
+          role: "SUPER_ADMIN",
+        },
+      });
+    } catch {
+      response.status(500).json({
+        success: false,
+        message: "Unable to retrieve the account.",
+      });
+    }
+  },
+);
+
+/**
  * POST /api/superadmin/logout
  *
- * Revokes the current server-side session and clears the session cookie.
+ * Revokes the server-side session and clears authentication cookies.
  */
 router.post(
   "/logout",
@@ -437,10 +481,6 @@ router.post(
 
     try {
       if (sessionToken) {
-        const { revokeSuperAdminSession } = await import(
-          "./sessionService.js"
-        );
-
         await revokeSuperAdminSession(sessionToken);
       }
 
