@@ -1,13 +1,13 @@
 -- ULTRA FINGERPRINT ATTENDANCE V2
--- Migration 002: Phone authentication and trusted devices.
+-- Migration 002: Phone authentication, OTP challenges, and trusted devices.
 --
 -- This migration prepares the database schema.
 -- It does not create a SuperAdmin account or implement login.
 
 BEGIN;
 
--- Phone numbers will be stored in international E.164 format,
--- for example: +2348012345678.
+-- Phone numbers use international E.164 format.
+-- Example: +2348012345678.
 
 ALTER TABLE platform_users
   ALTER COLUMN email DROP NOT NULL;
@@ -27,6 +27,7 @@ CREATE UNIQUE INDEX platform_users_phone_number_unique_idx
   WHERE phone_number IS NOT NULL;
 
 -- Store hashed OTP challenges, never plaintext OTP codes.
+-- Different purposes support the planned SuperAdmin security flows.
 
 CREATE TABLE platform_otp_challenges (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -40,7 +41,15 @@ CREATE TABLE platform_otp_challenges (
   otp_hash TEXT NOT NULL,
 
   purpose VARCHAR(32) NOT NULL
-    CHECK (purpose = 'TRUST_NEW_DEVICE'),
+    CHECK (
+      purpose IN (
+        'TRUST_NEW_DEVICE',
+        'SUPERADMIN_LOGIN',
+        'SECURITY_PAGE_ACCESS',
+        'PASSWORD_RESET',
+        'INITIAL_SETUP'
+      )
+    ),
 
   expires_at TIMESTAMPTZ NOT NULL,
 
@@ -61,8 +70,15 @@ CREATE INDEX platform_otp_challenges_user_created_idx
 CREATE INDEX platform_otp_challenges_expiry_idx
   ON platform_otp_challenges (expires_at);
 
+CREATE INDEX platform_otp_challenges_purpose_idx
+  ON platform_otp_challenges (
+    platform_user_id,
+    purpose,
+    created_at DESC
+  );
+
 -- Store only hashes of trusted-device tokens.
--- The raw device token must never be stored in this table.
+-- Never store raw device tokens in this table.
 
 CREATE TABLE platform_trusted_devices (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
