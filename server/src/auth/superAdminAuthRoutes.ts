@@ -153,9 +153,11 @@ function invalidRequest(response: Response): void {
 /**
  * POST /api/superadmin/login
  *
- * Authenticates the SuperAdmin using a phone number and password.
- * Every login requires SMS OTP verification, including trusted devices.
- * A successful password check alone never creates an authenticated session.
+ * Every login requires:
+ * 1. A valid SuperAdmin phone number and password.
+ * 2. A successful SUPERADMIN_LOGIN OTP verification.
+ *
+ * Trusted devices never bypass OTP verification.
  */
 router.post(
   "/login",
@@ -194,10 +196,10 @@ router.post(
         return;
       }
 
-      // Always require SMS OTP, even when the device was trusted before.
       const challenge = await createOtpChallenge(
         user.id,
         user.phoneNumber,
+        "SUPERADMIN_LOGIN",
       );
 
       const delivery = await sendSuperAdminOtpSms(
@@ -214,7 +216,6 @@ router.post(
         return;
       }
 
-      // Never return the OTP itself to the browser.
       response.status(202).json({
         success: true,
         requiresOtp: true,
@@ -234,8 +235,8 @@ router.post(
 /**
  * POST /api/superadmin/verify-otp
  *
- * Verifies the OTP, registers the device, and creates a session.
- * This route only creates a session after successful OTP verification.
+ * Verifies an OTP issued specifically for SuperAdmin login.
+ * Only a valid, unused SUPERADMIN_LOGIN challenge can create a session.
  */
 router.post(
   "/verify-otp",
@@ -268,6 +269,7 @@ router.post(
       const verification = await verifyOtpChallenge(
         challengeId,
         otp,
+        "SUPERADMIN_LOGIN",
       );
 
       if (verification !== "VERIFIED") {
@@ -299,7 +301,7 @@ router.post(
            ON u.id = c.platform_user_id
          WHERE c.id = $1
            AND c.consumed_at IS NOT NULL
-           AND c.purpose = 'TRUST_NEW_DEVICE'
+           AND c.purpose = 'SUPERADMIN_LOGIN'
            AND u.role = 'SUPER_ADMIN'
            AND u.is_active = TRUE
            AND u.phone_number = c.phone_number
@@ -371,8 +373,8 @@ router.post(
 /**
  * GET /api/superadmin/me
  *
- * Returns the current SuperAdmin only when a valid server-side
- * session has been verified by the authentication middleware.
+ * Returns the current SuperAdmin only when the server confirms
+ * that the session is valid and the account remains active.
  */
 router.get(
   "/me",
@@ -426,7 +428,8 @@ router.get(
 /**
  * POST /api/superadmin/logout
  *
- * Revokes the server-side session and clears authentication cookies.
+ * Revokes the current server-side session and clears authentication
+ * cookies from the browser.
  */
 router.post(
   "/logout",
