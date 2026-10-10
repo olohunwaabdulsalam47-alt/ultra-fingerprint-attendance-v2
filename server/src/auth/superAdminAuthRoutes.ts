@@ -154,8 +154,8 @@ function invalidRequest(response: Response): void {
  * POST /api/superadmin/login
  *
  * Authenticates the SuperAdmin using a phone number and password.
- * A trusted device can proceed without another OTP.
- * An untrusted device must complete SMS verification.
+ * Every login requires SMS OTP verification, including trusted devices.
+ * A successful password check alone never creates an authenticated session.
  */
 router.post(
   "/login",
@@ -194,55 +194,7 @@ router.post(
         return;
       }
 
-      const deviceToken = readCookie(request, DEVICE_COOKIE);
-
-      if (deviceToken) {
-        const trustedDeviceResult = await databasePool.query<{
-          id: string;
-        }>(
-          `SELECT id
-           FROM platform_trusted_devices
-           WHERE platform_user_id = $1
-             AND device_token_hash = $2
-             AND revoked_at IS NULL
-             AND expires_at > NOW()
-           LIMIT 1`,
-          [user.id, hashToken(deviceToken)],
-        );
-
-        const trustedDevice = trustedDeviceResult.rows[0];
-
-        if (trustedDevice) {
-          await databasePool.query(
-            `UPDATE platform_trusted_devices
-             SET last_used_at = NOW()
-             WHERE id = $1`,
-            [trustedDevice.id],
-          );
-
-          const session = await createPlatformSession(
-            user.id,
-            trustedDevice.id,
-          );
-
-          setSessionCookie(response, session.sessionToken);
-
-          response.status(200).json({
-            success: true,
-            requiresOtp: false,
-            message: "Login successful.",
-            user: {
-              id: user.id,
-              fullName: user.fullName,
-              phoneNumber: user.phoneNumber,
-              role: "SUPER_ADMIN",
-            },
-          });
-
-          return;
-        }
-      }
-
+      // Always require SMS OTP, even when the device was trusted before.
       const challenge = await createOtpChallenge(
         user.id,
         user.phoneNumber,
@@ -262,6 +214,7 @@ router.post(
         return;
       }
 
+      // Never return the OTP itself to the browser.
       response.status(202).json({
         success: true,
         requiresOtp: true,
@@ -281,7 +234,8 @@ router.post(
 /**
  * POST /api/superadmin/verify-otp
  *
- * Verifies the OTP, registers a trusted device, and creates a session.
+ * Verifies the OTP, registers the device, and creates a session.
+ * This route only creates a session after successful OTP verification.
  */
 router.post(
   "/verify-otp",
