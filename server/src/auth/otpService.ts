@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+
 import { databasePool } from "../config/database.js";
 import {
   generateOtp,
@@ -9,10 +10,21 @@ import {
 const OTP_LIFETIME_MS = 5 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 5;
 
+export const OTP_PURPOSES = [
+  "TRUST_NEW_DEVICE",
+  "SUPERADMIN_LOGIN",
+  "SECURITY_PAGE_ACCESS",
+  "PASSWORD_RESET",
+  "INITIAL_SETUP",
+] as const;
+
+export type OtpPurpose = (typeof OTP_PURPOSES)[number];
+
 export interface CreatedOtpChallenge {
   challengeId: string;
   otpCode: string;
   expiresAt: Date;
+  purpose: OtpPurpose;
 }
 
 export type OtpVerificationResult =
@@ -24,29 +36,45 @@ export type OtpVerificationResult =
 
 interface OtpChallengeRow {
   id: string;
+  platform_user_id: string;
+  phone_number: string;
   otp_hash: string;
+  purpose: OtpPurpose;
   expires_at: Date | string;
   attempts: number;
   consumed_at: Date | string | null;
 }
 
+function isValidUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+}
+
+function isOtpPurpose(value: string): value is OtpPurpose {
+  return OTP_PURPOSES.some((purpose) => purpose === value);
+}
+
 /**
- * Creates an OTP challenge for an authenticated platform user.
+ * Creates a purpose-specific OTP challenge for an active SuperAdmin.
  *
- * IMPORTANT:
- * - Call this only after verifying the user's password.
- * - Send otpCode to the user's verified phone using the SMS
- *   provider on the server.
- * - Never return otpCode to the browser or log it.
- * - Database migrations 002 and 003 must be applied first.
+ * Call this only after verifying the password or other prerequisite
+ * required by the requested operation.
+ *
+ * Send otpCode through the SMS provider on the server.
+ * Never return the OTP itself to the browser or log it.
+ *
+ * Migration 002 must be applied before using this service.
  */
 export async function createOtpChallenge(
   platformUserId: string,
   phoneNumber: string,
+  purpose: OtpPurpose = "TRUST_NEW_DEVICE",
 ): Promise<CreatedOtpChallenge> {
   if (
-    !/^[0-9a-f-]{36}$/i.test(platformUserId) ||
-    !/^\+[1-9][0-9]{7,14}$/.test(phoneNumber)
+    !isValidUuid(platformUserId) ||
+    !/^\+[1-9][0-9]{7,14}$/.test(phoneNumber) ||
+    !isOtpPurpose(purpose)
   ) {
     throw new Error("OTP challenge details are invalid.");
   }
@@ -58,8 +86,11 @@ export async function createOtpChallenge(
 
   const client = await databasePool.connect();
 
+  let transactionStarted = false;
+
   try {
     await client.query("BEGIN");
+    transactionStarted = true;
 
     const account = await client.query(
       `
@@ -78,16 +109,16 @@ export async function createOtpChallenge(
       throw new Error("Unable to create OTP challenge.");
     }
 
-    // Invalidate any older, unused OTP challenges for this user.
+    // Invalidate older, unused challenges for this account and purpose.
     await client.query(
       `
         UPDATE platform_otp_challenges
         SET consumed_at = NOW()
         WHERE platform_user_id = $1
-          AND purpose = 'TRUST_NEW_DEVICE'
+          AND purpose = $2
           AND consumed_at IS NULL
       `,
-      [platformUserId],
+      [platformUserId, purpose],
     );
 
     await client.query(
@@ -100,26 +131,36 @@ export async function createOtpChallenge(
           purpose,
           expires_at
         )
-        VALUES ($1, $2, $3, $4, 'TRUST_NEW_DEVICE', $5)
+        VALUES ($1, $2, $3, $4, $5, $6)
       `,
       [
         challengeId,
         platformUserId,
         phoneNumber,
         otpHash,
+        purpose,
         expiresAt,
       ],
     );
 
     await client.query("COMMIT");
+    transactionStarted = false;
 
     return {
       challengeId,
       otpCode,
       expiresAt,
+      purpose,
     };
   } catch (error) {
-    await client.query("ROLLBACK");
+    if (transactionStarted) {
+      try {
+        await client.query("ROLLBACK");
+      } catch {
+        // Preserve the original database error.
+      }
+    }
+
     throw error;
   } finally {
     client.release();
@@ -127,55 +168,65 @@ export async function createOtpChallenge(
 }
 
 /**
- * Verifies an OTP challenge.
+ * Verifies a specific OTP challenge.
  *
- * Challenge row locking ensures simultaneous verification
- * requests cannot successfully consume the same OTP twice.
+ * The expected purpose must be supplied by the server-side route.
+ * The client cannot choose the purpose or account being authenticated.
  *
- * The caller must not trust a client-provided user ID.
- * The challenge itself determines which account is checked.
+ * Row locking prevents concurrent requests from consuming the same
+ * challenge successfully more than once.
  */
 export async function verifyOtpChallenge(
   challengeId: string,
   submittedOtp: string,
+  expectedPurpose: OtpPurpose = "TRUST_NEW_DEVICE",
 ): Promise<OtpVerificationResult> {
   if (
-    !/^[0-9a-f-]{36}$/i.test(challengeId) ||
-    !/^[0-9]{6}$/.test(submittedOtp)
+    !isValidUuid(challengeId) ||
+    !/^[0-9]{6}$/.test(submittedOtp) ||
+    !isOtpPurpose(expectedPurpose)
   ) {
     return "INVALID";
   }
 
   const client = await databasePool.connect();
 
+  let transactionStarted = false;
+
   try {
     await client.query("BEGIN");
+    transactionStarted = true;
 
     const result = await client.query<OtpChallengeRow>(
       `
         SELECT
           id,
+          platform_user_id,
+          phone_number,
           otp_hash,
+          purpose,
           expires_at,
           attempts,
           consumed_at
         FROM platform_otp_challenges
         WHERE id = $1
-          AND purpose = 'TRUST_NEW_DEVICE'
+          AND purpose = $2
         FOR UPDATE
       `,
-      [challengeId],
+      [challengeId, expectedPurpose],
     );
 
     const challenge = result.rows[0];
 
     if (!challenge) {
       await client.query("COMMIT");
+      transactionStarted = false;
       return "INVALID";
     }
 
     if (challenge.consumed_at !== null) {
       await client.query("COMMIT");
+      transactionStarted = false;
       return "ALREADY_USED";
     }
 
@@ -190,6 +241,7 @@ export async function verifyOtpChallenge(
       );
 
       await client.query("COMMIT");
+      transactionStarted = false;
       return "EXPIRED";
     }
 
@@ -204,10 +256,12 @@ export async function verifyOtpChallenge(
       );
 
       await client.query("COMMIT");
+      transactionStarted = false;
       return "LOCKED";
     }
 
     const submittedHash = hashOtp(challengeId, submittedOtp);
+
     const matches = safeCompareHex(
       challenge.otp_hash,
       submittedHash,
@@ -232,11 +286,12 @@ export async function verifyOtpChallenge(
       );
 
       await client.query("COMMIT");
+      transactionStarted = false;
 
       return locked ? "LOCKED" : "INVALID";
     }
 
-    // Recheck that the account is still active before accepting OTP.
+    // Recheck the account and phone number before accepting the OTP.
     const account = await client.query(
       `
         SELECT users.id
@@ -244,12 +299,13 @@ export async function verifyOtpChallenge(
         INNER JOIN platform_otp_challenges AS challenges
           ON challenges.platform_user_id = users.id
         WHERE challenges.id = $1
+          AND challenges.purpose = $2
           AND users.role = 'SUPER_ADMIN'
           AND users.is_active = TRUE
           AND users.phone_number = challenges.phone_number
         FOR UPDATE OF users
       `,
-      [challengeId],
+      [challengeId, expectedPurpose],
     );
 
     if (account.rowCount !== 1) {
@@ -263,6 +319,7 @@ export async function verifyOtpChallenge(
       );
 
       await client.query("COMMIT");
+      transactionStarted = false;
       return "INVALID";
     }
 
@@ -276,11 +333,20 @@ export async function verifyOtpChallenge(
     );
 
     await client.query("COMMIT");
+    transactionStarted = false;
+
     return "VERIFIED";
   } catch (error) {
-    await client.query("ROLLBACK");
+    if (transactionStarted) {
+      try {
+        await client.query("ROLLBACK");
+      } catch {
+        // Preserve the original database error.
+      }
+    }
+
     throw error;
   } finally {
     client.release();
   }
-}
+      }
