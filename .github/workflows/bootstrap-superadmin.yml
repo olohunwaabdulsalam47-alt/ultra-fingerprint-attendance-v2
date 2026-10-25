@@ -15,9 +15,11 @@ jobs:
     name: Create Initial SuperAdmin
     runs-on: ubuntu-latest
     environment: superadmin-bootstrap
+
     defaults:
       run:
         working-directory: server
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
