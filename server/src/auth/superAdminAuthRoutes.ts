@@ -6,23 +6,15 @@ import {
   createPlatformSession,
   revokeSuperAdminSession,
 } from "./sessionService.js";
-import {
-  createOtpChallenge,
-  verifyOtpChallenge,
-} from "./otpService.js";
-import {
-  generateSecureToken,
-  hashToken,
-} from "./crypto.js";
+import { createOtpChallenge, verifyOtpChallenge } from "./otpService.js";
+import { generateSecureToken, hashToken } from "./crypto.js";
 import { sendSuperAdminOtpSms } from "./termiiSmsService.js";
 import { requireSuperAdmin } from "./superAdminAuthMiddleware.js";
 import {
   createSecurityAccessGrant,
   revokeSecurityAccessGrants,
 } from "./securityPageAccessService.js";
-import {
-  requireSecurityPageAccess,
-} from "./securityPageAccessMiddleware.js";
+import { requireSecurityPageAccess } from "./securityPageAccessMiddleware.js";
 
 const router = Router();
 
@@ -43,78 +35,56 @@ const cookieOptions = {
   path: "/",
 };
 
-type RateLimitEntry = {
-  count: number;
-  resetAt: number;
-};
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const RATE_LIMIT_MAX_REQUESTS = 10;
 
-const rateLimits = new Map<string, RateLimitEntry>();
-
-const RATE_LIMIT_WINDOW = 15 * 60 * 1000;
-const RATE_LIMIT_MAX = 10;
+const requestAttempts = new Map<
+  string,
+  { count: number; resetAt: number }
+>();
 
 function getClientKey(request: Request): string {
-  return request.ip ?? "unknown";
+  // Use the direct socket address unless trusted-proxy configuration
+  // is explicitly established by the server deployment.
+  return request.socket.remoteAddress ?? "unknown";
 }
 
 function isRateLimited(request: Request): boolean {
-  const now = Date.now();
   const key = getClientKey(request);
+  const now = Date.now();
+  const current = requestAttempts.get(key);
 
-  for (const [entryKey, entry] of rateLimits.entries()) {
-    if (entry.resetAt <= now) {
-      rateLimits.delete(entryKey);
-    }
-  }
-
-  const entry = rateLimits.get(key);
-
-  if (!entry || entry.resetAt <= now) {
-    rateLimits.set(key, {
+  if (!current || now >= current.resetAt) {
+    requestAttempts.set(key, {
       count: 1,
-      resetAt: now + RATE_LIMIT_WINDOW,
+      resetAt: now + RATE_LIMIT_WINDOW_MS,
     });
-
     return false;
   }
 
-  entry.count += 1;
-  return entry.count > RATE_LIMIT_MAX;
+  current.count += 1;
+  return current.count > RATE_LIMIT_MAX_REQUESTS;
 }
 
 function rejectRateLimitedRequest(response: Response): void {
-  response.setHeader("Retry-After", "900");
-
   response.status(429).json({
     success: false,
     message: "Too many attempts. Please try again later.",
   });
 }
 
-function readCookie(
-  request: Request,
-  cookieName: string,
-): string | null {
+function readCookie(request: Request, name: string): string | null {
   const cookieHeader = request.headers.cookie;
+  if (!cookieHeader) return null;
 
-  if (!cookieHeader) {
-    return null;
-  }
+  for (const part of cookieHeader.split(";")) {
+    const separator = part.indexOf("=");
+    if (separator < 0) continue;
 
-  for (const cookie of cookieHeader.split(";")) {
-    const separatorIndex = cookie.indexOf("=");
+    const key = part.slice(0, separator).trim();
+    if (key !== name) continue;
 
-    if (separatorIndex === -1) {
-      continue;
-    }
-
-    const name = cookie.slice(0, separatorIndex).trim();
-
-    if (name !== cookieName) {
-      continue;
-    }
-
-    const value = cookie.slice(separatorIndex + 1).trim();
+    const value = part.slice(separator + 1).trim();
 
     try {
       return decodeURIComponent(value);
@@ -126,55 +96,51 @@ function readCookie(
   return null;
 }
 
-function setSessionCookie(
-  response: Response,
-  sessionToken: string,
-): void {
-  response.cookie(SESSION_COOKIE, sessionToken, {
+function setSessionCookie(response: Response, token: string): void {
+  response.cookie(SESSION_COOKIE, token, {
     ...cookieOptions,
     maxAge: SESSION_MAX_AGE,
   });
 }
 
-function setDeviceCookie(
-  response: Response,
-  deviceToken: string,
-): void {
-  response.cookie(DEVICE_COOKIE, deviceToken, {
+function setDeviceCookie(response: Response, token: string): void {
+  response.cookie(DEVICE_COOKIE, token, {
     ...cookieOptions,
     maxAge: DEVICE_MAX_AGE,
   });
 }
 
-function setSecurityAccessCookie(
-  response: Response,
-  grantToken: string,
-): void {
-  response.cookie(SECURITY_ACCESS_COOKIE, grantToken, {
+function setSecurityAccessCookie(response: Response, token: string): void {
+  response.cookie(SECURITY_ACCESS_COOKIE, token, {
     ...cookieOptions,
     maxAge: SECURITY_ACCESS_MAX_AGE,
   });
 }
 
-function clearAuthenticationCookies(response: Response): void {
+function clearSessionCookie(response: Response): void {
   response.clearCookie(SESSION_COOKIE, cookieOptions);
+}
+
+function clearDeviceCookie(response: Response): void {
   response.clearCookie(DEVICE_COOKIE, cookieOptions);
+}
+
+function clearSecurityAccessCookie(response: Response): void {
   response.clearCookie(SECURITY_ACCESS_COOKIE, cookieOptions);
 }
 
 function invalidRequest(response: Response): void {
   response.status(400).json({
     success: false,
-    message: "Please check the information provided.",
+    message: "Invalid request.",
   });
 }
 
 function isValidChallengeId(value: unknown): value is string {
   return (
     typeof value === "string" &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      value,
-    )
+    value.length >= 10 &&
+    value.length <= 200
   );
 }
 
@@ -183,147 +149,135 @@ function isValidOtp(value: unknown): value is string {
 }
 
 /**
- * POST /api/superadmin/entry
+ * Initial Staff ID entry.
  *
- * Checks the supplied Staff ID and password.
- * Does not create a session, send an OTP, or grant
- * dashboard access. The frontend can navigate to
- * the separate SuperAdmin login page after success.
+ * This validates the registered SuperAdmin Staff ID and password.
+ * It does NOT create a session, send an OTP, or grant dashboard access.
+ * The frontend should navigate to the separate SuperAdmin Login page
+ * only after receiving the successful response.
  */
-router.post(
-  "/entry",
-  async (request: Request, response: Response) => {
-    if (isRateLimited(request)) {
-      rejectRateLimitedRequest(response);
-      return;
-    }
+router.post("/entry", async (request: Request, response: Response) => {
+  if (isRateLimited(request)) {
+    rejectRateLimitedRequest(response);
+    return;
+  }
 
-    const { staffId, password } = request.body ?? {};
+  const { staffId, password } = request.body ?? {};
+
+  if (
+    typeof staffId !== "string" ||
+    staffId.trim().length < 1 ||
+    staffId.trim().length > 40 ||
+    typeof password !== "string" ||
+    password.length < 1 ||
+    password.length > 1024
+  ) {
+    invalidRequest(response);
+    return;
+  }
+
+  try {
+    const account = await authenticateSuperAdmin(
+      staffId.trim(),
+      password,
+    );
 
     if (
-      typeof staffId !== "string" ||
-      staffId.trim().length < 1 ||
-      staffId.trim().length > 40 ||
-      typeof password !== "string" ||
-      password.length < 1 ||
-      password.length > 256
+      !account ||
+      !account.staffId ||
+      account.staffId.toUpperCase() !== staffId.trim().toUpperCase()
     ) {
-      invalidRequest(response);
+      response.status(401).json({
+        success: false,
+        message: "Invalid Staff ID or password.",
+      });
       return;
     }
 
-    try {
-      const account = await authenticateSuperAdmin(
-        staffId.trim(),
-        password,
-      );
-
-      if (!account) {
-        response.status(401).json({
-          success: false,
-          message: "Invalid Staff ID or password.",
-        });
-        return;
-      }
-
-      response.status(200).json({
-        success: true,
-        next: "SUPERADMIN_LOGIN",
-        message: "Continue to SuperAdmin Login.",
-      });
-    } catch {
-      response.status(500).json({
-        success: false,
-        message: "Unable to continue. Please try again.",
-      });
-    }
-  },
-);
+    response.status(200).json({
+      success: true,
+      next: "SUPERADMIN_LOGIN",
+      message: "Continue to SuperAdmin Login.",
+    });
+  } catch {
+    response.status(500).json({
+      success: false,
+      message: "Unable to continue. Please try again.",
+    });
+  }
+});
 
 /**
- * POST /api/superadmin/login
- *
- * Requires a registered SuperAdmin phone number and password.
- * Login is not complete until the SMS OTP is verified.
+ * Begin SuperAdmin login using registered phone number and password.
+ * Successful password verification starts an SMS OTP challenge.
  */
-router.post(
-  "/login",
-  async (request: Request, response: Response) => {
-    if (isRateLimited(request)) {
-      rejectRateLimitedRequest(response);
-      return;
-    }
+router.post("/login", async (request: Request, response: Response) => {
+  if (isRateLimited(request)) {
+    rejectRateLimitedRequest(response);
+    return;
+  }
 
-    const { phoneNumber, password, deviceName } = request.body ?? {};
+  const { phoneNumber, password, deviceName } = request.body ?? {};
 
-    if (
-      typeof phoneNumber !== "string" ||
-      !/^\+[1-9]\d{7,14}$/.test(phoneNumber) ||
-      typeof password !== "string" ||
-      password.length < 1 ||
-      password.length > 256 ||
-      (deviceName !== undefined &&
-        (typeof deviceName !== "string" ||
-          deviceName.length > 120))
-    ) {
-      invalidRequest(response);
-      return;
-    }
+  if (
+    typeof phoneNumber !== "string" ||
+    !/^\+[1-9]\d{7,14}$/.test(phoneNumber) ||
+    typeof password !== "string" ||
+    password.length < 1 ||
+    password.length > 1024 ||
+    (deviceName !== undefined &&
+      (typeof deviceName !== "string" || deviceName.length > 100))
+  ) {
+    invalidRequest(response);
+    return;
+  }
 
-    try {
-      const user = await authenticateSuperAdmin(
-        phoneNumber,
-        password,
-      );
+  try {
+    const account = await authenticateSuperAdmin(phoneNumber, password);
 
-      if (!user) {
-        response.status(401).json({
-          success: false,
-          message: "Invalid phone number or password.",
-        });
-        return;
-      }
-
-      const challenge = await createOtpChallenge(
-        user.id,
-        user.phoneNumber,
-        "SUPERADMIN_LOGIN",
-      );
-
-      const delivery = await sendSuperAdminOtpSms(
-        user.phoneNumber,
-        challenge.otpCode,
-      );
-
-      if (!delivery.success) {
-        response.status(503).json({
-          success: false,
-          message:
-            "Verification SMS could not be sent. Please try again.",
-        });
-        return;
-      }
-
-      response.status(202).json({
-        success: true,
-        requiresOtp: true,
-        challengeId: challenge.challengeId,
-        expiresAt: challenge.expiresAt,
-        message: "A verification code has been sent to your phone.",
-      });
-    } catch {
-      response.status(500).json({
+    if (!account || account.phoneNumber !== phoneNumber) {
+      response.status(401).json({
         success: false,
-        message: "Login could not be completed. Please try again.",
+        message: "Invalid phone number or password.",
       });
+      return;
     }
-  },
-);
+
+    const challenge = await createOtpChallenge({
+      superAdminId: account.id,
+      phoneNumber: account.phoneNumber,
+      purpose: "SUPERADMIN_LOGIN",
+    });
+
+    const sent = await sendSuperAdminOtpSms(
+      account.phoneNumber,
+      challenge.otp,
+    );
+
+    if (!sent) {
+      response.status(503).json({
+        success: false,
+        message: "Unable to send verification code. Please try again.",
+      });
+      return;
+    }
+
+    response.status(202).json({
+      success: true,
+      challengeId: challenge.challengeId,
+      expiresAt: challenge.expiresAt,
+      message: "Verification code sent.",
+    });
+  } catch {
+    response.status(500).json({
+      success: false,
+      message: "Unable to start login. Please try again.",
+    });
+  }
+});
 
 /**
- * POST /api/superadmin/verify-otp
- *
- * Verifies the login OTP, then creates the server-side session.
+ * Verify login OTP and create the authenticated platform session.
  */
 router.post(
   "/verify-otp",
@@ -339,65 +293,51 @@ router.post(
       !isValidChallengeId(challengeId) ||
       !isValidOtp(otp) ||
       (deviceName !== undefined &&
-        (typeof deviceName !== "string" ||
-          deviceName.length > 120))
+        (typeof deviceName !== "string" || deviceName.length > 100))
     ) {
       invalidRequest(response);
       return;
     }
 
     try {
-      const verification = await verifyOtpChallenge(
+      const challenge = await verifyOtpChallenge({
         challengeId,
         otp,
-        "SUPERADMIN_LOGIN",
-      );
+        purpose: "SUPERADMIN_LOGIN",
+      });
 
-      if (verification !== "VERIFIED") {
-        const statusCode = verification === "LOCKED" ? 429 : 401;
-
-        response.status(statusCode).json({
+      if (!challenge || !challenge.superAdminId) {
+        response.status(401).json({
           success: false,
-          message:
-            verification === "EXPIRED"
-              ? "The verification code has expired. Please request another."
-              : verification === "LOCKED"
-                ? "Too many incorrect codes. Please request another verification code."
-                : verification === "ALREADY_USED"
-                  ? "This verification code has already been used."
-                  : "The verification code is invalid.",
+          message: "Invalid or expired verification code.",
         });
         return;
       }
 
-      const challengeResult = await databasePool.query<{
-        platform_user_id: string;
-        phone_number: string;
+      const accountResult = await databasePool.query<{
+        id: string;
+        full_name: string;
+        phone_number: string | null;
       }>(
-        `
-          SELECT
-            c.platform_user_id,
-            c.phone_number
-          FROM platform_otp_challenges AS c
-          INNER JOIN platform_users AS u
-            ON u.id = c.platform_user_id
-          WHERE c.id = $1
-            AND c.consumed_at IS NOT NULL
-            AND c.purpose = 'SUPERADMIN_LOGIN'
-            AND u.role = 'SUPER_ADMIN'
-            AND u.is_active = TRUE
-            AND u.phone_number = c.phone_number
-          LIMIT 1
-        `,
-        [challengeId],
+        `SELECT id, full_name, phone_number
+         FROM platform_users
+         WHERE id = $1
+           AND role = 'SUPER_ADMIN'
+           AND is_active = TRUE
+         LIMIT 1`,
+        [challenge.superAdminId],
       );
 
-      const verifiedChallenge = challengeResult.rows[0];
+      const account = accountResult.rows[0];
 
-      if (!verifiedChallenge) {
+      if (
+        !account ||
+        !account.phone_number ||
+        account.phone_number !== challenge.phoneNumber
+      ) {
         response.status(401).json({
           success: false,
-          message: "The verification could not be completed.",
+          message: "Account verification failed.",
         });
         return;
       }
@@ -405,68 +345,50 @@ router.post(
       const deviceToken = generateSecureToken();
       const deviceTokenHash = hashToken(deviceToken);
 
-      const trustedDeviceResult = await databasePool.query<{
-        id: string;
-      }>(
-        `
-          INSERT INTO platform_trusted_devices (
-            platform_user_id,
-            device_token_hash,
-            device_name,
-            expires_at
-          )
-          VALUES (
-            $1,
-            $2,
-            $3,
-            NOW() + INTERVAL '30 days'
-          )
-          RETURNING id
-        `,
+      await databasePool.query(
+        `INSERT INTO platform_trusted_devices
+           (super_admin_id, device_token_hash, device_name, last_seen_at)
+         VALUES ($1, $2, $3, NOW())`,
         [
-          verifiedChallenge.platform_user_id,
+          account.id,
           deviceTokenHash,
-          typeof deviceName === "string"
-            ? deviceName.trim().slice(0, 120) || null
-            : null,
+          typeof deviceName === "string" && deviceName.trim()
+            ? deviceName.trim()
+            : "Unknown device",
         ],
       );
 
-      const trustedDevice = trustedDeviceResult.rows[0];
+      const sessionToken = await createPlatformSession({
+        superAdminId: account.id,
+        deviceTokenHash,
+      });
 
-      if (!trustedDevice) {
-        throw new Error("Trusted device creation failed.");
-      }
+      await revokeSecurityAccessGrants(account.id);
 
-      const session = await createPlatformSession(
-        verifiedChallenge.platform_user_id,
-        trustedDevice.id,
-      );
-
+      clearSecurityAccessCookie(response);
       setDeviceCookie(response, deviceToken);
-      setSessionCookie(response, session.sessionToken);
-
-      response.clearCookie(SECURITY_ACCESS_COOKIE, cookieOptions);
+      setSessionCookie(response, sessionToken);
 
       response.status(200).json({
         success: true,
-        requiresOtp: false,
-        message: "Verification successful. You are now logged in.",
+        user: {
+          id: account.id,
+          fullName: account.full_name,
+          phoneNumber: account.phone_number,
+          role: "SUPER_ADMIN",
+        },
       });
     } catch {
       response.status(500).json({
         success: false,
-        message: "Verification could not be completed. Please try again.",
+        message: "Unable to verify code. Please try again.",
       });
     }
   },
 );
 
 /**
- * POST /api/superadmin/security/request-otp
- *
- * Requires a valid login session and sends a separate
- * OTP for Security & Privacy access.
+ * Request a separate OTP for the Security & Privacy page.
  */
 router.post(
   "/security/request-otp",
@@ -477,94 +399,79 @@ router.post(
       return;
     }
 
-    const platformUserId = response.locals.superAdminId;
-    const sessionToken = readCookie(request, SESSION_COOKIE);
+    const superAdminId = response.locals.superAdminId as string | undefined;
 
-    if (!sessionToken) {
+    if (!superAdminId) {
       response.status(401).json({
         success: false,
-        message: "Please log in again.",
+        message: "Authentication required.",
       });
       return;
     }
 
     try {
-      const userResult = await databasePool.query<{
-        id: string;
-        phone_number: string;
+      const accountResult = await databasePool.query<{
+        phone_number: string | null;
       }>(
-        `
-          SELECT id, phone_number
-          FROM platform_users
-          WHERE id = $1
-            AND role = 'SUPER_ADMIN'
-            AND is_active = TRUE
-            AND phone_number IS NOT NULL
-          LIMIT 1
-        `,
-        [platformUserId],
+        `SELECT phone_number
+         FROM platform_users
+         WHERE id = $1
+           AND role = 'SUPER_ADMIN'
+           AND is_active = TRUE
+         LIMIT 1`,
+        [superAdminId],
       );
 
-      const user = userResult.rows[0];
+      const account = accountResult.rows[0];
 
-      if (
-        !user ||
-        !/^\+[1-9]\d{7,14}$/.test(user.phone_number)
-      ) {
-        response.status(400).json({
+      if (!account?.phone_number) {
+        response.status(403).json({
           success: false,
-          message:
-            "A valid registered SuperAdmin phone number is required.",
+          message: "A registered phone number is required.",
         });
         return;
       }
 
-      response.clearCookie(SECURITY_ACCESS_COOKIE, cookieOptions);
-      await revokeSecurityAccessGrants(sessionToken);
+      await revokeSecurityAccessGrants(superAdminId);
 
-      const challenge = await createOtpChallenge(
-        user.id,
-        user.phone_number,
-        "SECURITY_PAGE_ACCESS",
+      const challenge = await createOtpChallenge({
+        superAdminId,
+        phoneNumber: account.phone_number,
+        purpose: "SECURITY_PAGE_ACCESS",
+      });
+
+      const sent = await sendSuperAdminOtpSms(
+        account.phone_number,
+        challenge.otp,
       );
 
-      const delivery = await sendSuperAdminOtpSms(
-        user.phone_number,
-        challenge.otpCode,
-      );
-
-      if (!delivery.success) {
+      if (!sent) {
         response.status(503).json({
           success: false,
-          message:
-            "Security verification SMS could not be sent. Please try again.",
+          message: "Unable to send verification code. Please try again.",
         });
         return;
       }
+
+      clearSecurityAccessCookie(response);
 
       response.status(202).json({
         success: true,
-        requiresOtp: true,
         challengeId: challenge.challengeId,
         expiresAt: challenge.expiresAt,
-        message:
-          "A security verification code has been sent to your registered phone.",
+        message: "Security verification code sent.",
       });
     } catch {
       response.status(500).json({
         success: false,
-        message:
-          "Security verification could not be started. Please try again.",
+        message: "Unable to request verification code.",
       });
     }
   },
 );
 
 /**
- * POST /api/superadmin/security/verify-otp
- *
- * Verifies the separate security OTP and issues a short-lived
- * grant bound to the current SuperAdmin session.
+ * Verify the separate Security & Privacy OTP and grant short-lived access.
  */
 router.post(
   "/security/verify-otp",
@@ -575,110 +482,83 @@ router.post(
       return;
     }
 
+    const superAdminId = response.locals.superAdminId as string | undefined;
     const { challengeId, otp } = request.body ?? {};
 
-    if (!isValidChallengeId(challengeId) || !isValidOtp(otp)) {
+    if (
+      !superAdminId ||
+      !isValidChallengeId(challengeId) ||
+      !isValidOtp(otp)
+    ) {
       invalidRequest(response);
       return;
     }
 
-    const platformUserId = response.locals.superAdminId;
-    const sessionToken = readCookie(request, SESSION_COOKIE);
-
-    if (!sessionToken) {
-      response.status(401).json({
-        success: false,
-        message: "Please log in again.",
-      });
-      return;
-    }
-
     try {
-      const verification = await verifyOtpChallenge(
+      const challenge = await verifyOtpChallenge({
         challengeId,
         otp,
-        "SECURITY_PAGE_ACCESS",
-      );
+        purpose: "SECURITY_PAGE_ACCESS",
+      });
 
-      if (verification !== "VERIFIED") {
-        const statusCode = verification === "LOCKED" ? 429 : 401;
-
-        response.status(statusCode).json({
-          success: false,
-          message:
-            verification === "EXPIRED"
-              ? "The security verification code has expired. Request a new one."
-              : verification === "LOCKED"
-                ? "Too many incorrect codes. Request a new verification code."
-                : verification === "ALREADY_USED"
-                  ? "This security verification code has already been used."
-                  : "The security verification code is invalid.",
-        });
-        return;
-      }
-
-      const challengeResult = await databasePool.query<{
-        platform_user_id: string;
-        phone_number: string;
-      }>(
-        `
-          SELECT
-            c.platform_user_id,
-            c.phone_number
-          FROM platform_otp_challenges AS c
-          INNER JOIN platform_users AS u
-            ON u.id = c.platform_user_id
-          WHERE c.id = $1
-            AND c.consumed_at IS NOT NULL
-            AND c.purpose = 'SECURITY_PAGE_ACCESS'
-            AND c.platform_user_id = $2
-            AND u.role = 'SUPER_ADMIN'
-            AND u.is_active = TRUE
-            AND u.phone_number = c.phone_number
-          LIMIT 1
-        `,
-        [challengeId, platformUserId],
-      );
-
-      const verifiedChallenge = challengeResult.rows[0];
-
-      if (!verifiedChallenge) {
+      if (
+        !challenge ||
+        challenge.superAdminId !== superAdminId
+      ) {
         response.status(401).json({
           success: false,
-          message:
-            "The security verification could not be completed.",
+          message: "Invalid or expired verification code.",
         });
         return;
       }
 
-      const grant = await createSecurityAccessGrant(
-        platformUserId,
-        sessionToken,
+      const accountResult = await databasePool.query<{
+        id: string;
+        phone_number: string | null;
+      }>(
+        `SELECT id, phone_number
+         FROM platform_users
+         WHERE id = $1
+           AND role = 'SUPER_ADMIN'
+           AND is_active = TRUE
+         LIMIT 1`,
+        [superAdminId],
       );
 
-      setSecurityAccessCookie(response, grant.grantToken);
+      const account = accountResult.rows[0];
+
+      if (
+        !account ||
+        !account.phone_number ||
+        account.phone_number !== challenge.phoneNumber
+      ) {
+        response.status(401).json({
+          success: false,
+          message: "Account verification failed.",
+        });
+        return;
+      }
+
+      const grant = await createSecurityAccessGrant(superAdminId);
+
+      setSecurityAccessCookie(response, grant.token);
 
       response.status(200).json({
         success: true,
-        securityAccessGranted: true,
         expiresAt: grant.expiresAt,
-        message:
-          "Security verification successful. Temporary access has been granted.",
+        message: "Security page access granted.",
       });
     } catch {
       response.status(500).json({
         success: false,
-        message:
-          "Security verification could not be completed. Please try again.",
+        message: "Unable to verify code. Please try again.",
       });
     }
   },
 );
 
 /**
- * GET /api/superadmin/security/access
- *
- * Requires both the login session and security access grant.
+ * Check whether the current session has the separate Security & Privacy grant.
  */
 router.get(
   "/security/access",
@@ -687,46 +567,49 @@ router.get(
   (_request: Request, response: Response) => {
     response.status(200).json({
       success: true,
-      securityAccessGranted: true,
-      message: "Security-page access is verified.",
+      access: true,
     });
   },
 );
 
 /**
- * GET /api/superadmin/me
- *
- * Returns the current active SuperAdmin account.
+ * Return the currently authenticated SuperAdmin account.
  */
 router.get(
   "/me",
   requireSuperAdmin,
   async (_request: Request, response: Response) => {
-    const platformUserId = response.locals.superAdminId;
+    const superAdminId = response.locals.superAdminId as string | undefined;
+
+    if (!superAdminId) {
+      response.status(401).json({
+        success: false,
+        message: "Authentication required.",
+      });
+      return;
+    }
 
     try {
       const result = await databasePool.query<{
         id: string;
         full_name: string;
-        phone_number: string;
+        phone_number: string | null;
       }>(
-        `
-          SELECT id, full_name, phone_number
-          FROM platform_users
-          WHERE id = $1
-            AND role = 'SUPER_ADMIN'
-            AND is_active = TRUE
-          LIMIT 1
-        `,
-        [platformUserId],
+        `SELECT id, full_name, phone_number
+         FROM platform_users
+         WHERE id = $1
+           AND role = 'SUPER_ADMIN'
+           AND is_active = TRUE
+         LIMIT 1`,
+        [superAdminId],
       );
 
-      const user = result.rows[0];
+      const account = result.rows[0];
 
-      if (!user) {
+      if (!account || !account.phone_number) {
         response.status(401).json({
           success: false,
-          message: "The SuperAdmin account is no longer active.",
+          message: "Account is unavailable.",
         });
         return;
       }
@@ -734,26 +617,23 @@ router.get(
       response.status(200).json({
         success: true,
         user: {
-          id: user.id,
-          fullName: user.full_name,
-          phoneNumber: user.phone_number,
+          id: account.id,
+          fullName: account.full_name,
+          phoneNumber: account.phone_number,
           role: "SUPER_ADMIN",
         },
       });
     } catch {
       response.status(500).json({
         success: false,
-        message: "Unable to retrieve the account.",
+        message: "Unable to load account.",
       });
     }
   },
 );
 
 /**
- * POST /api/superadmin/logout
- *
- * Revokes the server-side session and security grants,
- * then clears authentication cookies.
+ * Revoke the current platform session and its security grants.
  */
 router.post(
   "/logout",
@@ -762,26 +642,33 @@ router.post(
 
     try {
       if (sessionToken) {
-        await revokeSecurityAccessGrants(sessionToken);
         await revokeSuperAdminSession(sessionToken);
       }
 
-      clearAuthenticationCookies(response);
+      const superAdminId = response.locals.superAdminId as
+        | string
+        | undefined;
+
+      if (superAdminId) {
+        await revokeSecurityAccessGrants(superAdminId);
+      }
+
+      clearSessionCookie(response);
+      clearDeviceCookie(response);
+      clearSecurityAccessCookie(response);
 
       response.status(200).json({
         success: true,
-        message: "Logged out successfully.",
+        message: "Signed out.",
       });
     } catch {
-      clearAuthenticationCookies(response);
-
       response.status(500).json({
         success: false,
-        message: "Logout could not be completed.",
+        message: "Unable to sign out. Please try again.",
       });
     }
   },
 );
 
 export default router;
-        
+    
