@@ -1,3 +1,4 @@
+
 import { Router, type Request, type Response } from "express";
 import { databasePool } from "../config/database.js";
 import { authenticateSuperAdmin } from "./superAdminAuthService.js";
@@ -78,7 +79,6 @@ function isRateLimited(request: Request): boolean {
   }
 
   entry.count += 1;
-
   return entry.count > RATE_LIMIT_MAX;
 }
 
@@ -183,12 +183,68 @@ function isValidOtp(value: unknown): value is string {
 }
 
 /**
+ * POST /api/superadmin/entry
+ *
+ * Checks the supplied Staff ID and password.
+ * Does not create a session, send an OTP, or grant
+ * dashboard access. The frontend can navigate to
+ * the separate SuperAdmin login page after success.
+ */
+router.post(
+  "/entry",
+  async (request: Request, response: Response) => {
+    if (isRateLimited(request)) {
+      rejectRateLimitedRequest(response);
+      return;
+    }
+
+    const { staffId, password } = request.body ?? {};
+
+    if (
+      typeof staffId !== "string" ||
+      staffId.trim().length < 1 ||
+      staffId.trim().length > 40 ||
+      typeof password !== "string" ||
+      password.length < 1 ||
+      password.length > 256
+    ) {
+      invalidRequest(response);
+      return;
+    }
+
+    try {
+      const account = await authenticateSuperAdmin(
+        staffId.trim(),
+        password,
+      );
+
+      if (!account) {
+        response.status(401).json({
+          success: false,
+          message: "Invalid Staff ID or password.",
+        });
+        return;
+      }
+
+      response.status(200).json({
+        success: true,
+        next: "SUPERADMIN_LOGIN",
+        message: "Continue to SuperAdmin Login.",
+      });
+    } catch {
+      response.status(500).json({
+        success: false,
+        message: "Unable to continue. Please try again.",
+      });
+    }
+  },
+);
+
+/**
  * POST /api/superadmin/login
  *
- * Requires a valid SuperAdmin phone number and password.
- * A login OTP must then be verified.
- *
- * Trusted devices do not bypass OTP verification.
+ * Requires a registered SuperAdmin phone number and password.
+ * Login is not complete until the SMS OTP is verified.
  */
 router.post(
   "/login",
@@ -267,7 +323,7 @@ router.post(
 /**
  * POST /api/superadmin/verify-otp
  *
- * Verifies the OTP issued specifically for SuperAdmin login.
+ * Verifies the login OTP, then creates the server-side session.
  */
 router.post(
   "/verify-otp",
@@ -390,7 +446,6 @@ router.post(
       setDeviceCookie(response, deviceToken);
       setSessionCookie(response, session.sessionToken);
 
-      // Logging in does not automatically authorize the security page.
       response.clearCookie(SECURITY_ACCESS_COOKIE, cookieOptions);
 
       response.status(200).json({
@@ -410,8 +465,8 @@ router.post(
 /**
  * POST /api/superadmin/security/request-otp
  *
- * Requires a valid SuperAdmin login session.
- * Requests a separate OTP for security-page access.
+ * Requires a valid login session and sends a separate
+ * OTP for Security & Privacy access.
  */
 router.post(
   "/security/request-otp",
@@ -452,7 +507,6 @@ router.post(
 
       const user = userResult.rows[0];
 
-      // Corrected E.164 phone-number validation.
       if (
         !user ||
         !/^\+[1-9]\d{7,14}$/.test(user.phone_number)
@@ -465,9 +519,7 @@ router.post(
         return;
       }
 
-      // Remove the previous browser grant immediately.
       response.clearCookie(SECURITY_ACCESS_COOKIE, cookieOptions);
-
       await revokeSecurityAccessGrants(sessionToken);
 
       const challenge = await createOtpChallenge(
@@ -511,8 +563,8 @@ router.post(
 /**
  * POST /api/superadmin/security/verify-otp
  *
- * Verifies a separate security-page OTP and issues a short-lived
- * grant bound to the current authenticated session.
+ * Verifies the separate security OTP and issues a short-lived
+ * grant bound to the current SuperAdmin session.
  */
 router.post(
   "/security/verify-otp",
@@ -626,7 +678,7 @@ router.post(
 /**
  * GET /api/superadmin/security/access
  *
- * Requires both an active login session and a valid security grant.
+ * Requires both the login session and security access grant.
  */
 router.get(
   "/security/access",
@@ -700,7 +752,7 @@ router.get(
 /**
  * POST /api/superadmin/logout
  *
- * Revokes the current server-side session and its security grants,
+ * Revokes the server-side session and security grants,
  * then clears authentication cookies.
  */
 router.post(
@@ -732,3 +784,4 @@ router.post(
 );
 
 export default router;
+        
