@@ -1,45 +1,43 @@
 name: One-Time SuperAdmin Bootstrap
 
 on:
-workflow_dispatch:
+  workflow_dispatch:
 
 permissions:
-contents: read
+  contents: read
 
 concurrency:
-group: superadmin-bootstrap
-cancel-in-progress: false
+  group: superadmin-bootstrap
+  cancel-in-progress: false
 
 jobs:
-bootstrap:
-name: Create Initial SuperAdmin
-runs-on: ubuntu-latest
-environment: superadmin-bootstrap
+  bootstrap:
+    name: Create Initial SuperAdmin
+    runs-on: ubuntu-latest
+    environment: superadmin-bootstrap
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-defaults:
-  run:
-    working-directory: server
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
-steps:
-  - name: Checkout repository
-    uses: actions/checkout@v4
+      - name: Install backend dependencies
+        run: npm install --no-audit --no-fund
 
-  - name: Setup Node.js
-    uses: actions/setup-node@v4
-    with:
-      node-version: 22
+      - name: Build backend
+        run: npm run build
 
-  - name: Install backend dependencies
-    run: npm install --no-audit --no-fund
-
-  - name: Build backend
-    run: npm run build
-
-  - name: Create initial SuperAdmin
-    env:
-      NODE_ENV: production
-      DATABASE_URL: ${{ secrets.BOOTSTRAP_DATABASE_URL }}
-      BOOTSTRAP_SUPERADMIN_NAME: ${{ secrets.BOOTSTRAP_SUPERADMIN_NAME }}
-      BOOTSTRAP_SUPERADMIN_PHONE: ${{ secrets.BOOTSTRAP_SUPERADMIN_PHONE }}
-      BOOTSTRAP_SUPERADMIN_PASSWORD: ${{ secrets.BOOTSTRAP_SUPERADMIN_PASSWORD }}
-    run: npm run bootstrap:superadmin
+      - name: Create initial SuperAdmin
+        env:
+          NODE_ENV: production
+          DATABASE_URL: ${{ secrets.BOOTSTRAP_DATABASE_URL }}
+          BOOTSTRAP_SUPERADMIN_NAME: ${{ secrets.BOOTSTRAP_SUPERADMIN_NAME }}
+          BOOTSTRAP_SUPERADMIN_PHONE: ${{ secrets.BOOTSTRAP_SUPERADMIN_PHONE }}
+          BOOTSTRAP_SUPERADMIN_PASSWORD: ${{ secrets.BOOTSTRAP_SUPERADMIN_PASSWORD }}
+        run: npm run bootstrap:superadmin
