@@ -6,14 +6,14 @@ export interface SuperAdminAccount {
   id: string;
   fullName: string;
   phoneNumber: string;
-  staffId: string;
+  staffId: string | null;
 }
 
 interface SuperAdminDatabaseRow {
   id: string;
   full_name: string;
-  phone_number: string;
-  staff_id: string;
+  phone_number: string | null;
+  staff_id: string | null;
   password_hash: string;
 }
 
@@ -34,34 +34,23 @@ export async function authenticateSuperAdmin(
 
   const normalizedIdentifier = identifier.trim();
 
-  const result =
-    await databasePool.query<SuperAdminDatabaseRow>(
-      `
-        SELECT
-          id,
-          full_name,
-          phone_number,
-          staff_id,
-          password_hash
-        FROM platform_users
-        WHERE role = 'SUPER_ADMIN'
-          AND is_active = TRUE
-          AND (
-            UPPER(staff_id) = UPPER($1)
-            OR phone_number = $1
-          )
-        LIMIT 1
-      `,
-      [normalizedIdentifier],
-    );
+  const result = await databasePool.query<SuperAdminDatabaseRow>(
+    `SELECT id, full_name, phone_number, staff_id, password_hash
+     FROM platform_users
+     WHERE role = 'SUPER_ADMIN'
+       AND is_active = TRUE
+       AND (
+         UPPER(staff_id) = UPPER($1)
+         OR phone_number = $1
+       )
+     LIMIT 1`,
+    [normalizedIdentifier],
+  );
 
   const account = result.rows[0];
 
-  if (
-    !account ||
-    !account.phone_number ||
-    !account.staff_id
-  ) {
+  // Existing phone-based login must keep working when staff_id is not assigned.
+  if (!account || !account.phone_number) {
     return null;
   }
 
